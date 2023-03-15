@@ -1,0 +1,13 @@
+## Python environment and generated files
+**/__pycache__/
+**/*.py[cod]
+.venv
+
+# Allow for scratch jupyter notebooks
+**/*.ipynb
+# Except the persistent ones for demo and development
+!test.ipynb
+!demo.ipynb
+
+# Editor specific stuff
+.vscode
