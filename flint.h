@@ -49,8 +49,12 @@ flint flint_add(flint f1, flint f2);
 flint flint_subtract(flint f1, flint f2);
 flint flint_multiply(flint f1, flint f2);
 flint flint_divide(flint f1, flint f2);
+flint flint_add_scalar(flint f, double s);
+flint flint_subtract_scalar(flint f, double s);
+flint scalar_subtract_flint(double s, flint f);
 flint flint_multiply_scalar(flint f, double s);
 flint flint_divide_scalar(flint f, double s);
+flint scalar_divide_flint(double s, flint f);
 // Whatever these things are
 flint flint_absolute(flint f);
 flint flint_copysign(flint f1, flint f2);
