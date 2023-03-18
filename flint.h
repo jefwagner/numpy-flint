@@ -1,5 +1,7 @@
 /// @file flint.h Functions for rounded floating point mathematics
 ///
+// Copyright (c) 2023, Jef Wagner <jefwagner@gmail.com>
+//
 /// This file is part of numpy-flint.
 ///
 /// Numpy-flint is free software: you can redistribute it and/or modify it under the
@@ -20,16 +22,16 @@
 extern "C" {
 #endif
 
-#if defined(_MSC_VER)
-#define NPY_INLINE __inline
-#elif defined(__GNUC__)
-#if defined(__STRICT_ANSI__)
-    #define NPY_INLINE __inline__
+#include <math.h>
+
+#if defined(__GNUC__)
+    #if defined(__STRICT_ANSI__)
+        #define NPY_INLINE __inline__
+    #else
+        #define NPY_INLINE inline
+    #endif
 #else
-    #define NPY_INLINE inline
-#endif
-#else
-#define NPY_INLINE
+    #define NPY_INLINE
 #endif
 
 /// @brief Get the max of 4 inputs
@@ -119,36 +121,36 @@ static NPY_INLINE int flint_isfinite(flint f) {
 // Comparisons
 //
 // Any overlap should trigger as equal
-static NPY_INLINE int flint_equal(flint f1, flint f2) {
+static NPY_INLINE int flint_eq(flint f1, flint f2) {
     return 
         !flint_isnan(f1) && !flint_isnan(f2) &&
         (f1.a <= f2.b) && (f1.b >= f2.a);
 }
 // No overlay - all above or all below
-static NPY_INLINE int flint_not_equal(flint f1, flint f2) {
+static NPY_INLINE int flint_ne(flint f1, flint f2) {
         flint_isnan(f1) || flint_isnan(f2) ||
         (f1.a > f2.b) || (f1.b < f2.a);
 }
 // Less than or equal allows for any amount of overlap
-static NPY_INLINE int flint_less_equal(flint f1, flint f2) {
+static NPY_INLINE int flint_le(flint f1, flint f2) {
     return
         !flint_isnan(f1) && !flint_isnan(f2) &&
         f1.a <= f2.b;
 }
 // Less than must not overlap at all
-static NPY_INLINE int flint_less(flint f1, flint f2) {
+static NPY_INLINE int flint_lt(flint f1, flint f2) {
     return 
         !flint_isnan(f1) && !flint_isnan(f2) &&
         f1.b < f2.a;
 }
 // Greater than or equal allows for any amount of overlap
-static NPY_INLINE int flint_greater_equal(flint f1, flint f2) {
+static NPY_INLINE int flint_ge(flint f1, flint f2) {
     return 
         !flint_isnan(f1) && !flint_isnan(f2) &&
         f1.b >= f2.a;
 }
 // Greater than must not overlap
-static NPY_INLINE int flint_greater(flint f1, flint f2) {
+static NPY_INLINE int flint_gt(flint f1, flint f2) {
     return 
         !flint_isnan(f1) && !flint_isnan(f2) &&
         f1.a > f2.b;
@@ -157,6 +159,10 @@ static NPY_INLINE int flint_greater(flint f1, flint f2) {
 //
 // Arithmatic
 //
+// --Identity--
+static NPY_INLINE flint flint_positive(flint f) {
+    return f;
+}
 // --Negation--
 // swap upper and lower interval boundaries
 static NPY_INLINE flint flint_negative(flint f) {

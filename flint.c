@@ -262,3 +262,42 @@ flint flint_power_scalar(flint f, double p) {
     fp = double_to_flint(p);
     return flint_power(f, fp);
 }
+
+
+// // Multiline macro for all binary function that return a bool
+// #define BINARY_BOOL_RETURNER(name) \
+// static PyObject* pyflint_##name(PyObject* a, PyObject* b) { \
+//     flint f = {0.0, 0.0, 0.0}; \
+//     double d = 0.0; \
+//     PyObject* D = {0}; \
+//     if (PyFlint_Check(a)) { \
+//         if (PyFlint_Check(b)) {\ 
+//             return PyBool_FromLong(flint_##name(a->obval,b->obval)); \
+//         } else { \
+//             D = PyNumber_Float(b); \
+//             if (D) { \
+//                 d = PyFloat_AsDouble(D); \
+//                 f = double_to_flint(d); \
+//                 return PyBool_FromLong(flint_##name(a->obval, f)); \
+//             } \
+//         } \
+//     } else { \
+//         D = PyNumber_Float(a); \
+//         if (D) { \
+//             d = PyFloat_AsDouble(D); \
+//             f = double_to_flint(d); \
+//             return PyBool_FromLong(flint_##(f, b->obval)); \
+//         } \
+//     } \
+//     PyErr_SetString(PyExc_TypeError, "Comparison with PyFlint must be with numeric type"); \
+//     return NULL; \
+// }
+// // All the comparison operators
+// BINARY_BOOL_RETURNER(equal)
+// BINARY_BOOL_RETURNER(not_equal)
+// BINARY_BOOL_RETURNER(less_equal)
+// BINARY_BOOL_RETURNER(less)
+// BINARY_BOOL_RETURNER(greater_equal)
+// BINARY_BOOL_RETURNER(greater)
+// // We're done with the macro now
+// #undef BINARY_BOOL_RETURNER
