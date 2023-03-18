@@ -344,6 +344,11 @@ flint flint_exp(flint f){
 flint flint_power(flint f, flint p) {
     return flint_exp(flint_multiply(p, flint_log(f)));
 }
+flint flint_inplace_power(flint* f, flint p) {
+    flint _f = *f;
+    *f = flint_exp(flint_multiply(p, flint_log(_f)));
+    return;
+}
 flint flint_power_scalar(flint f, double p) {
     return flint_exp(flint_multiply(double_to_flint(p), flint_log(f)));
 }

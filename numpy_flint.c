@@ -37,7 +37,7 @@ typedef struct {
 static PyTypeObject PyFlint_Type;
 
 /// @brief The array of member of the flint object
-PyMemberDef PyFlint_members[] = {
+PyMemberDef pyflint_members[] = {
     {"a", T_DOUBLE, offset(PyFlint, obval.a), READONLY,
         "The lower bound of the floating point interval"},
     {"b", T_DOUBLE, offset(PyFlint, obval.b), READONLY,
@@ -167,12 +167,14 @@ static PyObject* pyflint_inplace_##name(PyObject* a, PyObject* b) { \
 }
 
 
-// #####################################################
-// ---- Special Python Object Method Implementation ----
-// #####################################################
-// This section contains the 'special' dunder python implementation for
-// for the flint object
+// #####################################
+// ---- Flint Method Implementation ----
+// #####################################
+// This section contains all of the methods include many __dunder__ methods
 
+// --------------------------------
+// ---- Object handler methods ----
+// --------------------------------
 /// @brief The __new__ allocating constructor
 /// @param type The type of the PyObject
 /// @return A new PyObject of type `type`
@@ -262,6 +264,9 @@ state PyObject* pyflint_setstate(PyFlint* self, PyObject* args) {
     return Py_None;
 }
 
+// ------------------------------------
+// ---- Flint comparison operators ----
+// ------------------------------------
 /// @brief A rich comparison operator that implements __eq__, __ne__, __lt__, 
 ///        __le__, __gt__, and __ge__.
 /// @param a The first object to compare - should always be a PyFlint
@@ -314,6 +319,9 @@ static PyObject* pyflint_richcomp(PyObject* a, PyObject* b, int op) {
     }
 }
 
+// ---------------------------
+// ---- Numeric operators ----
+// ---------------------------
 /// @brief The _pos_ method, acts as the identity
 /// @param a The PyFlint interval value
 /// @return The reflected interval
@@ -372,7 +380,7 @@ static PyObject* pyflint_power(PyObject* a, PyObject* b,
     double d = 0.0;
     PyObject* D = {0};
     if (PyFlint_Check(a)) {
-        if (PyFlint_Check(b)) {\ 
+        if (PyFlint_Check(b)) {
             return PyFlint_FromFlint(flint_power(a->obval,b->obval));
         } else {
             D = PyNumber_Float(b);
@@ -393,7 +401,42 @@ static PyObject* pyflint_power(PyObject* a, PyObject* b,
     PyErr_SetString(PyExc_TypeError, "The ** operations with a PyFlint must be with numeric type");
     return NULL;
 }
+/// @brief The _ipow_ operator, evaluate a general power exponential
+/// @param a The base
+/// @param b The exponent
+/// @return The a**b
+static PyObject* pyflint_inplace_power(PyObject* a, PyObject* b,
+                                       PyObject* NPY_UNUSED(c)) {
+    flint *f = NULL;
+    double d = 0.0;
+    PyObject* D = {0};
+    if (PyFlint_Check(a)) {
+        if (PyFlint_Check(b)) {
+            return PyFlint_FromFlint(flint_inplace_power(&(a->obval),b->obval));
+        } else {
+            D = PyNumber_Float(b);
+            if (D) {
+                d = PyFloat_AsDouble(D);
+                f = double_to_flint(d);
+                return PyFlint_FromFlint(flint_inplace_power(&(a->obval), f));
+            }
+        }
+    }
+    PyErr_SetString(PyExc_TypeError, "The ** operations with a PyFlint must be with numeric type");
+    return NULL;
+}
+/// @brief The _float_ function to return a single float from the interval
+/// @param a The flint value
+/// @return The float value
+static PyObject* pyflint_float(PyObject* a) {
+    flint f = {0.0, 0.0, 0.0};
+    PyFlint_CheckedGetFlint(f, a);
+    return PyFloat_FromDouble(flint_to_double(f));
+}
 
+// -----------------------------------------
+// ---- Flint numeric struct definition ----
+// -----------------------------------------
 /// @brief The array of math dunder methods for the pyflint objects
 /// This array contains pointers to the arithmetic operators
 static PyNumberMethods pyflint_as_number = {
@@ -409,8 +452,13 @@ static PyNumberMethods pyflint_as_number = {
     .nb_inplace_multiply = pyflint_inplace_multiply, // binaryfunc nb_inplace_multiply;
     .np_true_divide = pyflint_divide, // binaryfunc nb_true_divide;
     .nb_inplace_true_divide = pyflint_inplace_divide, // binaryfunc nb_inplace_true_divide;
+    .np_inplace_power = pyflint_inplace_power, // ternaryfunc np_inplace_power;
+    .nb_float = pyflint_float, // unaryfunc np_float;
 };
 
+// ----------------------------------------------
+// ---- Floating point special value queries ----
+// ----------------------------------------------
 /// @brief Query if a PyFlint interval contains zero
 /// @param a The PyFlint object
 /// @return Py_True if a != 0 otherwise Py_False
@@ -430,6 +478,10 @@ UNARY_BOOL_RETURNER(isfinite)
 /// @brief Evaluate the square root of the interval
 /// @param a The PyFlint object
 /// @return The square root of the interval if a >= 0 else NaN
+
+// -----------------------------------
+// ---- Elementary math functions ----
+// -----------------------------------
 UNARY_FLINT_RETURNER(sqrt)
 /// @brief Evaluate the natural log of the interval
 /// @param a The PyFlint object
@@ -440,9 +492,11 @@ UNARY_FLINT_RETURNER(log)
 /// @return The exponential of the interval
 UNARY_FLINT_RETURNER(exp)
 
-/// @brief A PyMethodDef 
-/// Defines the flint methods accessible in python the structure is
-/// (name, function, ARGTYPE_MACRO, description)
+// ---------------------------------------
+// ---- Flint method table definition ----
+// ---------------------------------------
+/// @brief Defines the flint methods accessible for flint objects in python 
+/// the list structure is (name, function, ARGTYPE_MACRO, description)
 PyMethodDef pyflint_methods[] = {
     // methods for querying special float values
     {"isnonzero", pyflint_isnonzero, METH_NOARGS,
@@ -459,13 +513,34 @@ PyMethodDef pyflint_methods[] = {
     "Evaluate the natural log of the interval"},
     {"exp", pyflint_exp, METH_NOARGS,
     "Evaluate the exponential func of an interval"},
+    {"__reduce__", pyflint_reduce, METH_NOARGS,
+    "Return state information for pickling"},
+    {"__getstate__", pyflint_getstate, METH_VARARGS,
+    "Return state information for pickling"},
+    {"__setstate__", pyflint_setstate, METH_VARARGS,
+    "Reconstruct state information from pickle"},
     // sentinel
     {NULL, NULL, 0, NULL}
 };
 
-// Define a getter for the interval
-static PyObject *
-PyFlint_get_interval(PyObject *self, void *closure) {
+// --------------------------------------
+// ---- Property setters and getters ----
+// --------------------------------------
+/// @brief Get the size of the interval of flint object
+/// This defines a member property getter for the size of the interval
+/// so you can get the endpoints of hte interval with `eps = f.eps`
+static PyObject* pyflint_get_eps(PyObject *self, void *NPY_UNUSED(closure)) {
+    flint *f = &(((PyFlint*) self)->obval);
+    PyObject *eps = PyFloat_FromDouble((f->b)-(f->a));
+    return eps;
+}
+
+/// @brief Get the interval from a flint object
+/// This defines a member property getter for the interval. It returns a tuple
+/// with the (lower, upper) endpoints of the interval. use it to get the the
+/// interval with `a,b = f.interval`
+static PyObject* pyflint_get_interval(PyObject* self, 
+                                      void* NPY_UNUSED(closure)) {
     flint *f = &(((PyFlint*) self)->obval);
     PyObject *tuple = PyTuple_New(2);
     PyTuple_SET_ITEM(tuple, 0, PyFloat_FromDouble(f->a));
@@ -473,14 +548,130 @@ PyFlint_get_interval(PyObject *self, void *closure) {
     return tuple;
 }
 
+/// @brief Set the flint from an interval
+/// This defines a member proper setter for the flint interval. You can use it
+/// to either set the endpoints `f.interval = (a,b)`, in which case the
+/// tracked value will be the midpoint `v =0.5* (a+b)'. You can also set the
+/// interval AND tracked value `f.interval = (a,b,v)`
+static PyObject* pyflint_set_interval(PyObject* self, PyObject* value,
+                                      void* NPY_UNUSED(closure)) {
+    flint* = &(((PyFlint*) self)->obval);
+    PyObject *ob;
+    // Confirm it's not empty
+    if (value == NULL) {
+        PyErr_SetString(PyExc_ValueError, "Cannot set interval from empty value");
+        return -1;
+    }
+    // Confirm its a sequence of length 2 or 3
+    if (!PySequence_Check(value) && 
+        !(PySequence_Size(value) == 2) && 
+        !(PySequence(value) == 3)) {
+        PyErr_SetString(PyExc_ValueError, "The interval must be a sequence of length 2 or 3")
+        return -1;
+    }
+    // Get the first element - that's our a value
+    ob = PyNumber_Float(PySequence_GetItem(value, 0));
+    if (ob == NULL;) {
+        PyErr_SetString(PyExc_ValueError, "Values must be numeric types")
+    }
+    f->a = PyFloat_AsDouble(ob);
+    Py_DECREF(ob);
+    // Get the second element - that's are b value
+    ob = PyNumber_Float(PySequence_GetItem(value, 1));
+    if (ob == NULL;) {
+        PyErr_SetString(PyExc_ValueError, "Values must be numeric types")
+    }
+    f->b = PyFloat_AsDouble(ob);
+    Py_DECREF(ob);
+    // Calculate or get the v value
+    if (PySequence_Size(value) == 2) {
+        f->v = 0.5*(a+b);
+    } else {
+        ob = PyNumber_Float(PySequence_GetItem(value, 1));
+        if (ob == NULL;) {
+            PyErr_SetString(PyExc_ValueError, "Values must be numeric types")
+        }
+        f->v = PyFloat_AsDouble(ob);
+        Py_DECREF(ob);
+    }
+    return 0;
+}
 
-// // Define the new python array type
-// PyTypeObject PyFlintArrType_Type = {
-//     PyVarObject_HEAD_INIT(NULL, 0)
-//     .tp_name = "flint.flint",
-//     .tp_basicsize = sizeof(PyFlintScalarObject),
-//     .tp_members = PyFlintArrType_members,
-//     .tp_getset = PyFlintArrType_getset,
-//     .tp_flags = Py_TPFLAGS_DEFAULT,
-//     .tp_new = PyType_GenericNew,
-// };
+// -----------------------------------------
+// ---- Flint property table definition ----
+// -----------------------------------------
+/// @brief Defines the properties with getters or setters for flints
+/// The structure is {"name", getter, setter, "description", NULL}
+PyGetSetDef pyflint_getset[] = {
+    {"eps", PyFlint_get_eps, NULL,
+    "The size of the interval (b-a)", NULL},
+    {"interval", pyflint_get_interval, pyflint_set_interval,
+    "The interval as a tuple (a,b) or (a,b,v)"},
+    //sentinal
+    {NULL, NULL, NULL, NULL, NULL}
+};
+
+
+// ------------------------------------------
+// ---- Flint custom type implementation ----
+// ------------------------------------------
+/// @brief The Custom type structure for the new Flint object
+static PyTypeObject PyFlint_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0) // PyObject_VAR_HEAD
+    .tp_name = "flint", // const char *tp_name; /* For printing, in format "<module>.<name>" */
+    .tp_basicsize = sizeof(PyFlint), //Py_ssize_t tp_basicsize, tp_itemsize; /* For allocation */
+    // reprfunc tp_repr;
+    .tp_as_number = &pyflint_as_number, // PyNumberMethods *tp_as_number;
+    // hashfunc tp_hash;
+    // reprfunc tp_str;
+    .tp_flags = PY_TPFLAGS_DEFAULT | PY_TPFLAGS_BASETYPE, // unsigned long tp_flags; /* Flags to define presence of optional/expanded features */
+    // const char *tp_doc; /* Documentation string */
+    .tp_richcompare = pyflint_richcomp, // richcmpfunc tp_richcompare;
+    /* Attribute descriptor and subclassing stuff */
+    .tp_methods = pyflint_methods, // struct PyMethodDef *tp_methods;
+    .tp_members = pyflint_members, // struct PyMemberDef *tp_members;
+    .tp_getset = pyflint_getset, // struct PyGetSetDef *tp_getset;
+    // struct _typeobject *tp_base;
+    .tp_init = pyflint_init, // initproc tp_init;
+    .tp_new = pyflint_new, //newfunc tp_new;
+    // unsigned int tp_version_tag;
+}
+
+// ###########################
+// ---- Module definition ----
+// ###########################
+/// @brief Struct with minimum needed components for the module definition
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    .m_name = "flint",
+    .m_doc = "Rounded floating point intervals (flints)"
+    .m_size = -1
+};
+
+/// @brief The module initialization function
+PyMODINIT_FUNC PyInit_flint(void) {
+    PyObject *m;
+
+    m = PyModule_Create(&moduledef);
+    if (m==NULL) {
+        PyErr_Print();
+        PyErr_SetString(PyExc_SystemError, "Could not create flint module.");
+        return NULL;
+    }
+    if (PyType_Ready(&PyQuaternion_Type) < 0) {
+        PyErr_Print();
+        PyErr_SetString(PyExc_SystemError, "Could not initialize flint.flint type.");
+        return NULL;
+    }
+    Py_INCREF(&PyFlint_Type);
+    if (PyModule_AddObject(m, "flint", (PyObject *) &PyFlint_Type) < 0) {
+        Py_DECREF(&PyFlint_Type);
+        Py_DECREF(m);
+        PyErr_Print();
+        PyErr_SetString(PyExc_SystemError, "Could not add flint.flint type to module flint.");
+        return NULL;
+    }
+
+    return m;
+}
+
