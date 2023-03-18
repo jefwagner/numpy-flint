@@ -3,6 +3,11 @@
 **/*.py[cod]
 .venv
 
+# Build artifacts
+**/*.egg-info
+**/build
+**/*.cpython*
+
 # Allow for scratch jupyter notebooks
 **/*.ipynb
 # Except the persistent ones for demo and development

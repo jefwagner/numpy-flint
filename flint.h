@@ -101,7 +101,7 @@ static NPY_INLINE flint float_to_flint(float f) {
 // Floating point special value queries
 //
 // Interval must not overlap zero
-static NPY_INLINE int flint_isnonzero(flint f) {
+static NPY_INLINE int flint_nonzero(flint f) {
     return f.a > 0.0 || f.b < 0.0;
 }
 // Any value is a NaN
@@ -128,6 +128,7 @@ static NPY_INLINE int flint_eq(flint f1, flint f2) {
 }
 // No overlay - all above or all below
 static NPY_INLINE int flint_ne(flint f1, flint f2) {
+    return
         flint_isnan(f1) || flint_isnan(f2) ||
         (f1.a > f2.b) || (f1.b < f2.a);
 }
@@ -174,14 +175,14 @@ static NPY_INLINE flint flint_negative(flint f) {
 static NPY_INLINE flint flint_add(flint f1, flint f2) {
     flint _f = {
         nextafter(f1.a+f2.a, -INFINITY),
-        nextafter(f1.b+f2.b, IFINITY),
+        nextafter(f1.b+f2.b, INFINITY),
         f1.v+f2.v
     };
-    return _f
+    return _f;
 }
 static NPY_INLINE void flint_inplace_add(flint* f1, flint f2) {
-    f1->a = np.nextafter(f1->a + f2.a, -INFINITY);
-    f1->b = np.nextafter(f1->b + f2.b, INFINITY);
+    f1->a = nextafter(f1->a + f2.a, -INFINITY);
+    f1->b = nextafter(f1->b + f2.b, INFINITY);
     f1->v += f2.v;
     return;
 }
@@ -191,7 +192,7 @@ static NPY_INLINE flint flint_scalar_add(double s, flint f) {
 static NPY_INLINE flint flint_add_scalar(flint f, double s) {
     return flint_add(f, double_to_flint(s));    
 }
-static NPY_INLINE void flint_inplace_add_scalar(flint f, double s) {
+static NPY_INLINE void flint_inplace_add_scalar(flint* f, double s) {
     flint_inplace_add(f, double_to_flint(s));
     return;
 }
@@ -201,13 +202,13 @@ static NPY_INLINE flint flint_subtract(flint f1, flint f2) {
     flint _f = {
         nextafter(f1.a-f2.b, -INFINITY),
         nextafter(f1.b-f1.a, INFINITY),
-        f1.v-f2.v;
-    }
+        f1.v-f2.v
+    };
     return _f;
 }
 static NPY_INLINE void flint_inplace_subtract(flint* f1, flint f2) {
-    f1->a = np.nextafter(f1->a - f2.b, -INFINITY);
-    f1->b = np.nextafter(f1->b - f2.a, INFINITY);
+    f1->a = nextafter(f1->a - f2.b, -INFINITY);
+    f1->b = nextafter(f1->b - f2.a, INFINITY);
     f1->v -= f2.v;
     return;
 }
@@ -234,9 +235,9 @@ static NPY_INLINE flint flint_multiply(flint f1, flint f2) {
 }
 static NPY_INLINE void flint_inplace_multiply(flint* f1, flint f2) {
     double _a = min4(f1->a*f2.a, f1->a*f2.b, f1->b*f2.a, f1->b*f2.b);
-    f->b = max4(f1->a*f2.a, f1->a*f2.b, f1->b*f2.a, f1->b*f2.b);
+    f1->b = max4(f1->a*f2.a, f1->a*f2.b, f1->b*f2.a, f1->b*f2.b);
     f1->a = _a;
-    f1->v *= f2->v;
+    f1->v *= f2.v;
     return;
 };
 static NPY_INLINE flint flint_scalar_multiply(double s, flint f) {
@@ -262,9 +263,9 @@ static NPY_INLINE flint flint_divide(flint f1, flint f2) {
 }
 static NPY_INLINE void flint_inplace_divide(flint* f1, flint f2) {
     double _a = min4(f1->a/f2.a, f1->a/f2.b, f1->b/f2.a, f1->b/f2.b);
-    f->b = max4(f1->a/f2.a, f1->a/f2.b, f1->b/f2.a, f1->b/f2.b);
+    f1->b = max4(f1->a/f2.a, f1->a/f2.b, f1->b/f2.a, f1->b/f2.b);
     f1->a = _a;
-    f1->v /= f2->v;
+    f1->v /= f2.v;
     return;
 };
 static NPY_INLINE flint flint_scalar_divide(double s, flint f) {
@@ -298,7 +299,7 @@ static NPY_INLINE flint flint_absolute(flint f) {
     return _f;
 }
 // Square root, only gives NaN if whole interval is less than zero
-flint flint_sqrt(flint f) {
+static NPY_INLINE flint flint_sqrt(flint f) {
     flint _f;
     if (f.b < 0.0) {
         double nan = sqrt(-1.0);
@@ -310,13 +311,13 @@ flint flint_sqrt(flint f) {
     } else {
         _f.a = nextafter(sqrt(f.a), -INFINITY);
         _f.b = nextafter(sqrt(f.b), INFINITY);
-        _f.c = sqrt(f.c)
+        _f.v = sqrt(f.v);
     }
-    return f;
+    return _f;
 }
 // Log only gives NAN if whole interval is less than zero
-flint flint_log(flint f) {
-    flint _f:
+static NPY_INLINE flint flint_log(flint f) {
+    flint _f;
     if (f.b < 0.0) {
         double nan = sqrt(-1.0);
         _f.a = nan; _f.b = nan; _f.v = nan;
@@ -327,12 +328,12 @@ flint flint_log(flint f) {
     } else {
         _f.a = nextafter(log(f.a), -INFINITY);
         _f.b = nextafter(log(f.b), INFINITY);
-        _f.c = sqrt(f.c)
+        _f.v = log(f.v);
     }
     return _f;
 }
 // Exponential function is a monotonic function with full range
-flint flint_exp(flint f){
+static NPY_INLINE flint flint_exp(flint f){
     flint _f = {
         nextafter(exp(f.a), -INFINITY),
         nextafter(exp(f.b), INFINITY),
@@ -341,15 +342,15 @@ flint flint_exp(flint f){
     return _f;
 }
 // Power function uses log, so has the same limit
-flint flint_power(flint f, flint p) {
+static NPY_INLINE flint flint_power(flint f, flint p) {
     return flint_exp(flint_multiply(p, flint_log(f)));
 }
-flint flint_inplace_power(flint* f, flint p) {
+static NPY_INLINE void flint_inplace_power(flint* f, flint p) {
     flint _f = *f;
     *f = flint_exp(flint_multiply(p, flint_log(_f)));
     return;
 }
-flint flint_power_scalar(flint f, double p) {
+static NPY_INLINE flint flint_power_scalar(flint f, double p) {
     return flint_exp(flint_multiply(double_to_flint(p), flint_log(f)));
 }
 
