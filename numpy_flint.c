@@ -246,6 +246,22 @@ static int pyflint_init(PyObject* self, PyObject* args, PyObject* kwargs) {
     return -1;
 }
 
+/// @brief The __repr__ printing method
+/// @return A python string representation of the tracked value
+static PyObject* pyflint_repr(PyObject* self) {
+    double v = ((PyFlint*) self)->obval.v;
+    PyObject* V = PyFloat_FromDouble(v);
+    return PyObject_Repr(V);
+}
+
+/// @brief The __str__ printing method
+/// @return A python string representation of the tracked value
+static PyObject* pyflint_str(PyObject* self) {
+    double v = ((PyFlint*) self)->obval.v;
+    PyObject* V = PyFloat_FromDouble(v);
+    return PyObject_Str(V);
+}
+
 /// @brief The __reduce__ method reproduces the internal structure of the flint 
 ///        struct as object as PyObjects
 /// @return a Tuple with Type and a Tuple of the object members as PyObjects
@@ -670,10 +686,10 @@ static PyTypeObject PyFlint_Type = {
     PyVarObject_HEAD_INIT(NULL, 0) // PyObject_VAR_HEAD
     .tp_name = "flint", // const char *tp_name; /* For printing, in format "<module>.<name>" */
     .tp_basicsize = sizeof(PyFlint), //Py_ssize_t tp_basicsize, tp_itemsize; /* For allocation */
-    // reprfunc tp_repr;
+    .tp_repr = pyflint_repr, // reprfunc tp_repr;
     .tp_as_number = &pyflint_as_number, // PyNumberMethods *tp_as_number;
     // hashfunc tp_hash;
-    // reprfunc tp_str;
+    .tp_str = pyflint_str, // reprfunc tp_str;
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, // unsigned long tp_flags; /* Flags to define presence of optional/expanded features */
     // const char *tp_doc; /* Documentation string */
     .tp_richcompare = pyflint_richcomp, // richcmpfunc tp_richcompare;
@@ -693,13 +709,13 @@ static PyTypeObject PyFlint_Type = {
 /// @brief Struct with minimum needed components for the module definition
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "flint",
+    .m_name = "numpy_flint",
     .m_doc = "Rounded floating point intervals (flints)",
     .m_size = -1
 };
 
 /// @brief The module initialization function
-PyMODINIT_FUNC PyInit_flint(void) {
+PyMODINIT_FUNC PyInit_numpy_flint(void) {
     PyObject *m;
 
     m = PyModule_Create(&moduledef);
