@@ -73,6 +73,11 @@ typedef struct {
     double v;
 } flint;
 
+#define FLINT_ZERO (flint) {0.0, 0.0, 0.0}
+#define FLINT_ONE (flint) {1.0, 1.0, 1.0}
+#define FLINT_HALF (flint) {0.5, 0.5, 0.5}
+#define FLINT_TWO (flint) {2.0, 2.0, 2.0}
+
 //
 // Conversions
 //

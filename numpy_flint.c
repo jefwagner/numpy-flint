@@ -17,6 +17,7 @@
 // You should have received a copy of the GNU General Public License along with
 // numpy-flint. If not, see <https://www.gnu.org/licenses/>.
 //
+#include <stdint.h>
 #include <Python.h>
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
@@ -37,7 +38,7 @@ typedef struct {
 /// @brief The flint PyTypeObject
 static PyTypeObject PyFlint_Type;
 
-/// @brief The array of member of the flint object
+/// @brief The array of data members of the flint object
 PyMemberDef pyflint_members[] = {
     {"a", T_DOUBLE, offsetof(PyFlint, obval.a), READONLY,
         "The lower bound of the floating point interval"},
@@ -86,6 +87,7 @@ static NPY_INLINE PyObject* PyFlint_FromFlint(flint f) {
 
 /// @brief A macro that defines function of one variable that returns a bool
 /// @param name the name of the function in the c and pyflint implementation
+/// @return Returns the result of pure c flint_{name} function
 #define UNARY_BOOL_RETURNER(name) \
 static PyObject* pyflint_##name(PyObject* a) { \
     flint f = {0.0, 0.0, 0.0}; \
@@ -95,6 +97,7 @@ static PyObject* pyflint_##name(PyObject* a) { \
 
 /// @brief A macro that defines a functions of one variable that return a flint
 /// @param name the name of the function in the c and pyflint implementation
+/// @return The result of hte pure c flint_{name} function
 #define UNARY_FLINT_RETURNER(name) \
 static PyObject* pyflint_##name(PyObject* a) { \
     flint f = {0.0, 0.0, 0.0}; \
@@ -104,6 +107,7 @@ static PyObject* pyflint_##name(PyObject* a) { \
 
 /// @brief A macro that makes a unary operator a method acting on self
 /// @param name The name of the function in the c and pyflint implementation
+/// @return The result of the Python/C pyflint_{name} function
 #define UNARY_TO_SELF_METHOD(name) \
 static PyObject* pyflint_##name##_meth(PyObject* self, \
                                        PyObject* NPY_UNUSED(args)) { \
@@ -112,6 +116,7 @@ static PyObject* pyflint_##name##_meth(PyObject* self, \
 
 /// @brief A macro that defines functions of two variables that return a flint
 /// @param name the name of the function in the c and pyflint implementation
+/// @return The result of c function flint_{name} or Py_NotImplemented
 #define BINARY_FLINT_RETURNER(name) \
 static PyObject* pyflint_##name(PyObject* a, PyObject* b) { \
     flint fa = {0.0, 0.0, 0.0}; \
@@ -134,18 +139,21 @@ static PyObject* pyflint_##name(PyObject* a, PyObject* b) { \
     } else { \
         D = PyNumber_Float(a); \
         if (D) { \
-            fb = ((PyFlint*)b)->obval;\
+            fb = ((PyFlint*)b)->obval; \
             d = PyFloat_AsDouble(D); \
             fa = double_to_flint(d); \
             return PyFlint_FromFlint(flint_##name(fa, fb)); \
         } \
     } \
-    PyErr_SetString(PyExc_TypeError, "+,-,*,/,** operations with PyFlint must be with numeric type"); \
-    return NULL; \
+    PyErr_SetString(PyExc_TypeError, \
+        "+,-,*,/,** operations with PyFlint must be with numeric type"); \
+    Py_INCREF(Py_NotImplemented); \
+    return Py_NotImplemented; \
 }
 
 /// @brief A macro that defines an inplace operator
 /// @param name the name of the operation in the c and pyflint implementation
+/// @return The `a` PyFlint object c func flint_inplace_{name} acting on `obval`
 #define BINARY_FLINT_INPLACE(name) \
 static PyObject* pyflint_inplace_##name(PyObject* a, PyObject* b) { \
     flint* fptr = NULL; \
@@ -169,22 +177,30 @@ static PyObject* pyflint_inplace_##name(PyObject* a, PyObject* b) { \
                 return a; \
             } \
         } \
-    } else { \
-        D = PyNumber_Float(a); \
-        if (D) { \
-            fb = ((PyFlint*) b)->obval; \
-            d = PyFloat_AsDouble(D); \
-            a = PyFlint_FromFlint(double_to_flint(d)); \
-            fptr = &(((PyFlint*) a)->obval); \
-            flint_inplace_##name(fptr, fb); \
-            Py_INCREF(a); \
-            return a; \
-        } \
     } \
-    PyErr_SetString(PyExc_TypeError, "+=,-=,*=,/= inplace operations with PyFlint must be with numeric type"); \
-    return NULL; \
+    PyErr_SetString(PyExc_TypeError, \
+        "+=,-=,*=,/= inplace operations with PyFlint must be with numeric type"); \
+    Py_INCREF(Py_NotImplemented); \
+    return Py_NotImplemented; \
 }
 
+/// @brief A macro that wraps a binary function into a tertiary function
+/// @param name the name of the operation in the c and pyflint implementation
+/// @return The result of the Python/C pyflint_{name} function
+#define BINARY_TO_TERTIARY(name) \
+static NPY_INLINE PyObject* pyflint_b2t_##name(PyObject *a, PyObject* b, \
+                                               PyObject* NPY_UNUSED(c)) { \
+    return pyflint_##name(a,b); \
+}
+
+/// @brief A macro that wraps an inplace binary func into a tertiary func
+/// @param name the name of the operation in the c and pyflint implementation
+/// @return The result of the Python/C pyflint_inplace_{name} function
+#define BINARY_TO_TERTIARY_INPLACE(name) \
+static NPY_INLINE PyObject* pyflint_b2t_inplace_##name(PyObject *a, PyObject* b, \
+                                                       PyObject* NPY_UNUSED(c)) { \
+    return pyflint_inplace_##name(a,b); \
+}
 
 // #####################################
 // ---- Flint Method Implementation ----
@@ -262,11 +278,29 @@ static PyObject* pyflint_str(PyObject* self) {
     return PyObject_Str(V);
 }
 
+/// @brief The __hash__ function create an unique-ish integer from the flint.
+///        Implements Bob Jenkin's one-at-a-time hash.
+/// @return An integer to be used in a hash-table
+static Py_hash_t pyflint_hash(PyObject *self) {
+    flint* f = &(((PyFlint*)self)->obval);
+    uint8_t* flint_as_data = (uint8_t*) &f;
+    size_t i = 0;
+    Py_hash_t h = 0;
+    for (i=0; i<sizeof(flint); ++i) {
+        h += flint_as_data[i];
+        h += h << 10;
+        h ^= h >> 6;
+    }
+    h += h << 3;
+    h ^= h >> 11;
+    h += h << 15;
+    return (h==-1)?2:h;
+}
+
 /// @brief The __reduce__ method reproduces the internal structure of the flint 
 ///        struct as object as PyObjects
 /// @return a Tuple with Type and a Tuple of the object members as PyObjects
 static PyObject* pyflint_reduce(PyObject* self, PyObject* NPY_UNUSED(args)) {
-
     return Py_BuildValue("O(OOO)", Py_TYPE(self),
                          PyFloat_FromDouble(((PyFlint*) self)->obval.a),
                          PyFloat_FromDouble(((PyFlint*) self)->obval.b),
@@ -324,7 +358,8 @@ static PyObject* pyflint_richcomp(PyObject* a, PyObject* b, int op) {
         if (!D) {
             PyErr_SetString(PyExc_TypeError, 
                 "Comparison with PyFlint must be with numeric type");
-            return NULL;
+            Py_INCREF(Py_NotImplemented);
+            return Py_NotImplemented;
         }
         d = PyFloat_AsDouble(D);
         fo = double_to_flint(d);
@@ -351,6 +386,7 @@ static PyObject* pyflint_richcomp(PyObject* a, PyObject* b, int op) {
         default:
             PyErr_SetString(PyExc_TypeError, 
                 "Supported comparison operators are ==, !=, <, <=, >, >=");
+            Py_INCREF(Py_NotImplemented);
             return Py_NotImplemented;
     }
 }
@@ -390,6 +426,12 @@ BINARY_FLINT_RETURNER(multiply)
 /// @param b The second number/flint
 /// @return a/b
 BINARY_FLINT_RETURNER(divide)
+/// @brief The _pow_ or _rpow_ operator, evaluate a general power exponential
+/// @param a The base
+/// @param b The exponent
+/// @return The a**b
+BINARY_FLINT_RETURNER(power)
+BINARY_TO_TERTIARY(power)
 /// @brief The _iadd_ addition operator for intervals
 /// @param a The first operand, value replaced with a+b
 /// @param b The second operand
@@ -406,83 +448,12 @@ BINARY_FLINT_INPLACE(multiply)
 /// @param a The first operand, value replaced with a+b
 /// @param b The second operand
 BINARY_FLINT_INPLACE(divide)
-/// @brief The _pow_ or _rpow_ operator, evaluate a general power exponential
-/// @param a The base
-/// @param b The exponent
-/// @return The a**b
-static PyObject* pyflint_power(PyObject* a, PyObject* b, 
-                               PyObject* NPY_UNUSED(c)) {
-    flint fa = {0.0, 0.0, 0.0};
-    flint fb = {0.0, 0.0, 0.0};
-    double d = 0.0;
-    PyObject* D = {0};
-    if (PyFlint_Check(a)) {
-        fa = ((PyFlint*) a)->obval;
-        if (PyFlint_Check(b)) {
-            fb = ((PyFlint*) b)->obval;
-            return PyFlint_FromFlint(flint_power(fa, fb));
-        } else {
-            D = PyNumber_Float(b);
-            if (D) {
-                d = PyFloat_AsDouble(D);
-                fb = double_to_flint(d);
-                return PyFlint_FromFlint(flint_power(fa, fb));
-            }
-        }
-    } else {
-        D = PyNumber_Float(a);
-        if (D) {
-            fb = ((PyFlint*) b)->obval;
-            d = PyFloat_AsDouble(D);
-            fa = double_to_flint(d);
-            return PyFlint_FromFlint(flint_power(fa, fb));
-        }
-    }
-    PyErr_SetString(PyExc_TypeError, "The ** operations with a PyFlint must be with numeric type");
-    return NULL;
-}
 /// @brief The _ipow_ operator, evaluate a general power exponential
 /// @param a The base
 /// @param b The exponent
 /// @return The a**b
-static PyObject* pyflint_inplace_power(PyObject* a, PyObject* b,
-                                       PyObject* NPY_UNUSED(c)) {
-    flint* fptr = NULL;
-    flint fb = {0.0, 0.0, 0.0};
-    double d = 0.0;
-    PyObject* D = {0};
-    if (PyFlint_Check(a)) {
-        fptr = &(((PyFlint*) a)->obval);
-        if (PyFlint_Check(b)) {
-            fb = ((PyFlint*) b)->obval;
-            flint_inplace_power(fptr,fb);
-            Py_INCREF(a);
-            return a;
-        } else {
-            D = PyNumber_Float(b);
-            if (D) {
-                d = PyFloat_AsDouble(D);
-                fb = double_to_flint(d);
-                flint_inplace_power(fptr, fb);
-                Py_INCREF(a);
-                return a;
-            }
-        }
-    } else {
-        D = PyNumber_Float(a);
-        if (D) {
-            fb = ((PyFlint*) b)->obval;
-            d = PyFloat_AsDouble(D);
-            a = PyFlint_FromFlint(double_to_flint(d));
-            fptr = &(((PyFlint*) a)->obval);
-            flint_inplace_power(fptr, fb);
-            Py_INCREF(a);
-            return a;
-        }
-    }
-    PyErr_SetString(PyExc_TypeError, "The ** operations with a PyFlint must be with numeric type");
-    return NULL;
-}
+BINARY_FLINT_INPLACE(power)
+BINARY_TO_TERTIARY_INPLACE(power)
 /// @brief The _float_ function to return a single float from the interval
 /// @param a The flint value
 /// @return The float value
@@ -501,7 +472,7 @@ static PyNumberMethods pyflint_as_number = {
     .nb_add = pyflint_add, // binaryfunc nb_add;
     .nb_subtract = pyflint_subtract, // binaryfunc nb_subtract;
     .nb_multiply = pyflint_multiply, // binaryfunc nb_multiply;
-    .nb_power = pyflint_power, // ternaryfunc nb_power;
+    .nb_power = pyflint_b2t_power, // ternaryfunc nb_power;
     .nb_negative = pyflint_negative, // unaryfunc nb_negative;
     .nb_positive = pyflint_positive, // unaryfunc nb_positive;
     .nb_absolute = pyflint_absolute, // unaryfunc nb_absolute;
@@ -510,7 +481,7 @@ static PyNumberMethods pyflint_as_number = {
     .nb_inplace_multiply = pyflint_inplace_multiply, // binaryfunc nb_inplace_multiply;
     .nb_true_divide = pyflint_divide, // binaryfunc nb_true_divide;
     .nb_inplace_true_divide = pyflint_inplace_divide, // binaryfunc nb_inplace_true_divide;
-    .nb_inplace_power = pyflint_inplace_power, // ternaryfunc np_inplace_power;
+    .nb_inplace_power = pyflint_b2t_inplace_power, // ternaryfunc np_inplace_power;
     .nb_float = pyflint_float, // unaryfunc np_float;
 };
 
@@ -688,7 +659,7 @@ static PyTypeObject PyFlint_Type = {
     .tp_basicsize = sizeof(PyFlint), //Py_ssize_t tp_basicsize, tp_itemsize; /* For allocation */
     .tp_repr = pyflint_repr, // reprfunc tp_repr;
     .tp_as_number = &pyflint_as_number, // PyNumberMethods *tp_as_number;
-    // hashfunc tp_hash;
+    .tp_hash = pyflint_hash, // hashfunc tp_hash;
     .tp_str = pyflint_str, // reprfunc tp_str;
     .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, // unsigned long tp_flags; /* Flags to define presence of optional/expanded features */
     // const char *tp_doc; /* Documentation string */
@@ -702,6 +673,372 @@ static PyTypeObject PyFlint_Type = {
     .tp_new = pyflint_new, //newfunc tp_new;
     // unsigned int tp_version_tag;
 };
+
+
+// ##########################################
+// ---- End of standard Python Extension ----
+// ##########################################
+
+// #######################
+// ---- NumPy support ----
+// #######################
+
+// -------------------------------------
+// ---- NumPy NewType Array Methods ----
+// -------------------------------------
+/// @brief Get an flint element from a numpy array
+/// @param data A pointer into the numpy array at the proper location
+/// @param arr A pointer to the full array
+/// @return A python object representing the data element from the numpy array
+static PyObject* npyflint_getitem(void* data, void* arr) {
+    flint f:
+    memcpy(&f, data, sizeof(flint));
+    return PyFlint_FromFlint(f);
+}
+
+/// @brief Set an element in a numpy array
+/// @param item The python object to set the data-element to
+/// @param data A pointer into the nummy array at the proper location
+/// @param arr A pointer to the full array
+/// @return 0 on success -1 on failure
+static int npyflint_setitem(PyObject* item, void* data, void* arr) {
+    flint f = {0.0, 0.0, 0.0}:
+    PyObject* D = {0}:
+    if (PyFlint_Check(item)) {
+        f = ((PyFlint*) item)->obval;
+    } else {
+        D = PyNumber_Float(item);
+        if (D == NULL) {
+            PyErr_SetString(PyExc_TypeError,
+                "expected flint or numeric type.")
+            return -1;
+        }
+        f = double_to_flint(PyFloat_AsDouble(item));
+    }
+    memcpy(data, &f, sizeof(flint));
+    return 0;
+}
+
+/// @brief Copy an element of an ndarray from src to dst, possibly swapping
+///        Utilizes the existing copyswap function for doubles
+/// @param dst A pointer to the destination
+/// @param src A pointer to the source
+/// @param swap A flag to swap data, or simply copy
+/// @param arr A pointer to the full array
+static void npyflint_copyswap(void* dst, void* src, int swap, void* arr) {
+    // Get a pointer to the array description for doubles
+    PyArray_Descr* descr = PyArray_DescrFromType(NPY_DOUBLE);
+    // Call the double copyswap rountine for an flint sized array (3) 
+    descr->f->copyswapn(dst, sizeof(double), src, sizeof(double), 
+                        sizeof(flint)/sizof(double), swap, arr);
+    Py_DECREF(descr);
+}
+
+/// @brief Copy a section of an ndarray from src to dst, possibly swapping
+///        Utilizes the existing copyswap function for doubles
+/// @param dst A pointer to the destination
+/// @param dstride The number of bytes between entries in the destination array
+/// @param src A pointer to the source
+/// @param sstride The number of bytes between entries in the source array
+/// @param n The number of elements to copy
+/// @param swap A flag to swap data, or simply copy
+/// @param arr A pointer to the full array
+static void npyflint_copyswapn(void* dst, npy_intp dstride,
+                               void* src, npy_intp sstride,
+                               npy_intp n, int swap, void* arr) {
+    // Cast the destination and source points into flint type
+    flint* _dst = (flint*) dst;
+    flint* _srt = (flint*) src;
+    // Grab a copy of the 
+    PyArray_Descr* descr = PyArray_DescrFromType(NPY_DOUBLE);
+    // If the stride is represents a contiguous array do a single call
+    if (dstride == sizeof(flint) && sstride == sizeof(flint)) {
+        descr->f->copyswapn(dst, sizeof(double), src, sizeof(double), 
+                            n*sizeof(flint)/sizof(double), swap, arr);
+    } else {
+        // Else we make a call for each double in the struct
+        descr->f->copyswapn(&(_dst->a), sizeof(double), &(_src->a), sizeof(double), 
+                            n*sizeof(flint)/sizof(double), swap, arr);
+        descr->f->copyswapn(&(_dst->b), sizeof(double), &(_src->b), sizeof(double), 
+                            n*sizeof(flint)/sizof(double), swap, arr);
+        descr->f->copyswapn(&(_dst->v), sizeof(double), &(_src->v), sizeof(double), 
+                            n*sizeof(flint)/sizof(double), swap, arr);
+    }
+    Py_DECREF(descr);
+}
+
+/// @brief Check if an element of a numpy array is zero
+/// @param data a pointer to the element in a numpy array
+/// @param arr a pointer to the full array
+/// @return NPY_TRUE if zero, NPY_FALSE otherwise
+///
+/// Note: Because the we've defined overlap as equal, we can think of two
+/// different forms of equal zero - one: all zero bits in the flint object, two:
+/// the flint has non-zero elements but still overlaps with zero. In this case
+/// I've decided to use the first definition.
+static npy_bool npyflint_nonzero(void* data, void* arr) {
+    flint f = 0:
+    memcpy(data, &f, sizeof(flint));
+    return (f.a==0.0 && f.b==0.0 && f.v==0.0)?NPY_TRUE:NPY_FALSE;
+    // return flint_nonzero(f)?NPY_TRUE:NPY_FALSE;
+}
+
+/// @brief Compare two elements of a numpy array
+/// @param d1 A pointer to the first element
+/// @param d1 A pointer to the second element
+/// @param arr A pointer to the array
+/// @return 1 if *d1 > *d2, 0 if *d1 == *d2, -1 if *d1 < d2*
+static int npyflint_compare(void* d1, void* d2, void* arr) {
+    int ret;
+    flint fp1 = *((flint*) d1);
+    flint fp2 = *((flint*) d2):
+    npy_bool dnan1 = flint_isnan(fp1);
+    npy_bool dnan2 = flint_isnan(fp2);
+    if (dnan1) {
+        ret = dnan2 ? 0 : -1;
+    } else if (dnan2) {
+        ret = 1;
+    } else if (fp1.b < fp2.a) {
+        ret = -1;
+    } else if (fp1.a > fp2.b) {
+        ret = 1;
+    } else {
+        ret = 1;
+    }
+    return ret;
+}
+
+/// @brief Find the index of the max element of the array
+/// @param data A pointer to the first elemetn in the array to check
+/// @param n The number of elements to check
+/// @param max_ind A pointer to an int, the max will be written here
+/// @return Always returns 0;
+///
+/// Note: Since the comparisons with flints is inexact, I've chose to use this
+/// to find the index of the flint with the largest upper limit.
+static int npyflint_argmax(void* data, npy_intp n, 
+                           npy_intp max_ind, void* arr) {
+    if (n==0) {
+        return 0;
+    }
+    flint* fdata = (flint*) data;
+    npy_intp i = 0;
+    double max = data[i]->b;
+    *max_ind = 0;
+    for (i=0; i<n; i++) {
+        if (data[i]->b > max) {
+            max = data[i]->b;
+            *max_ind = i;
+        }
+    }
+    return 0;
+}
+
+/// @brief Find the index of the min element of the array
+/// @param data A pointer to the first elemetn in the array to check
+/// @param n The number of elements to check
+/// @param min_ind A pointer to an int, the min will be written here
+/// @return Always returns 0;
+///
+/// Note: Since the comparisons with flints is inexact, I've chose to use this
+/// to find the index of the flint with the smallest lower limit.
+static int npyflint_argmin(void* data, npy_intp n, 
+                           npy_intp min_ind, void* arr) {
+    if (n==0) {
+        return 0;
+    }
+    flint* fdata = (flint*) data;
+    npy_intp i = 0;
+    double min = data[i]->b;
+    *min_ind = 0;
+    for (i=0; i<n; i++) {
+        if (data[i]->b < min) {
+            min = data[i]->b;
+            *min_ind = i;
+        }
+    }
+    return 0;
+}
+
+/// @brief Compute the dot product between two arrays of flint
+/// @param d1 A pointer to the first element of the first array
+/// @param s1 A distance between data element of the first array in bytes
+/// @param d2 A pointer to the first element of the second array
+/// @param s1 A distance between data element of the second array inbytes
+/// @param res A pointer to a flint, will hold the result
+/// @param n The number of elements to use in calcuating the dot product
+/// @param arr A pointer to the full array? (even for two arrays?)
+static void npyflint_dotfunc(void* d1, npy_intp s1,
+                             void* d2, npy_intp s2, 
+                             void* res, npy_intp n, void* arr) {do
+    uint8_t* fp1 = (uint8_t*) d1;
+    uint8_t* fp2 = (uint8_t*) d2;
+    flint fres = {0.0, 0.0, 0.0};
+    npy_intp i = 0;
+    for (i=0; i<n; i++) {
+        flint_inplace_add(
+            &fres, 
+            flint_multiply(
+                *((flint*) fp1), 
+                *((flint*) fp2),
+            )
+        );
+        fp1 += s1;
+        fp2 += s2;
+    }
+    *res = fres;
+}
+
+/// @brief Fill an array based on it's first two elements
+/// @param data A pointer to the first element
+/// @param n The number of element to fill in
+/// @param arr A pointer to the full array
+static void npyflint_fill(void* data, npy_intp n, void* arr) {
+    if ( n < 2) {
+        return;
+    }
+    flint* fp = (flint*) data;
+    flint delta = flint_subtrac(fp[0], fp[1]);
+    npy_intp i = 2;
+    for( i=2; i<n; i++) {
+        fp[i] = flint_add(fp[0], flint_multiply_scalar(delta, (double) i));
+    }
+}
+
+/// @brief Fill an array based on it's first two elements
+/// @param buffer A pointer to the first element
+/// @param n The number of element to fill in
+/// @param arr A pointer to the full array
+static void npyflint_fill(void* buffer, npy_intp n, void* arr) {
+    if ( n < 2) {
+        return;
+    }
+    flint* fp = (flint*) buffer;
+    flint delta = flint_subtrac(fp[0], fp[1]);
+    npy_intp i = 2;
+    for( i=2; i<n; i++) {
+        fp[i] = flint_add(fp[0], flint_multiply_scalar(delta, (double) i));
+    }
+}
+
+/// @brief Fill an array with a single flint value
+/// @param buffer A pointer to the first element to fill in
+/// @param n The number of flints to fill in
+/// @param elem A pointer to the flint value to copy over
+/// @param arr A pointer to the full array
+static void npyflint_fillwithscalar(void* buffer, npy_intp n, 
+                                    void* elem, void* arr) {
+    (flint*) fp = (flint*) buffer;
+    flint f = *((flint*) elem);
+    npy_intp i;
+    for (i=0; i<n; i++) {
+        fp[i] = f;
+    }
+}
+
+static PyArray_ArrFuncs npyflint_arrfuncs; // = {
+//     // PyArray_VectorUnaryFunc *cast[NPY_NTYPES];
+//     .getitem = npyflint_getitem, // PyArray_GetItemFunc *getitem;
+//     .setitem = npyflint_setitem, // PyArray_SetItemFunc *setitem;
+//     .copyswapn = npyflint_copyswapn, // PyArray_CopySwapNFunc *copyswapn;
+//     .copyswap = npyflint_copyswap, // PyArray_CopySwapFunc *copyswap;
+//     .compare = npyflint_compare, // PyArray_CompareFunc *compare;
+//     .argmax = npyflint_argmax, // PyArray_ArgFunc *argmax;
+//     .argmin = npyflint_argmin,
+//     .dotfunc = npyflint_dotfunc, // PyArray_DotFunc *dotfunc;
+//     // PyArray_ScanFunc *scanfunc;
+//     // PyArray_FromStrFunc *fromstr;
+//     .nonzero = npyflint_nonzero, // PyArray_NonzeroFunc *nonzero;
+//     .fill = npyflint_fill, // PyArray_FillFunc *fill;
+//     .fillwithscalar = npyflint_fillwithscalar, // PyArray_FillWithScalarFunc *fillwithscalar;
+//     // PyArray_SortFunc *sort[NPY_NSORTS];
+//     // PyArray_ArgSortFunc *argsort[NPY_NSORTS];
+//     // PyObject *castdict;
+//     // PyArray_ScalarKindFunc *scalarkind;
+//     // int **cancastscalarkindto;
+//     // int *cancastto;
+// };
+
+typedef struct {uint8_t c; flint f; } align_test;
+
+PyArray_Descr npyflint_descr = {
+    PyObject_HEAD_INIT(0)
+    .typeobj = &PyFlint_Type, // PyTypeObject *typeobj;
+    .kind = 'V', // char kind;
+    .type = 'f', // char type;
+    .byteorder = '=', // char byteorder;
+    .flags = NPY_NEEDS_PYAPI | NPY_USE_GETITEM | NPY_USE_SETITEM, // char flags;
+    .type_num = 0, // int type_num;
+    .elsize = sizeof(flint), // int elsize;
+    .alignment = offsetof(align_test, f), // int alignment;
+    .subarray = NULL, // PyArray_ArrayDescr *subarray;
+    .field = NULL, // PyObject *fields;
+    .names = NULL, // PyObject *names;
+    .f = &npyflint_arrfuncs, // PyArray_ArrFuncs *f;
+    .metadata = NULL, // PyObject *metadata;
+    .c_metadata = NULL, // NpyAuxData *c_metadata;
+    // npy_hash_t hash;
+}
+
+// --------------------------------
+// ---- dtype to dtype casting ----
+// --------------------------------
+/// @brief A macro defining a conversion between types
+/// @param from_type The type being casting from
+/// @param to_type The type being cast to
+/// @param cast_command The command(s) needed to cast between types
+#define NPYFLINT_CAST(from_tpye, to_type, cast_command) \
+static void npycast_##from_type##_##to_type(void *from, void *to, npy_intp n, \
+                                 void *fromarr, void *toarr) = { \
+    const from_type* _from = (from_type*) from; \
+    to_type* _to = (to_type*) to; \
+    npy_intp i = 0; \
+    from_type x; \
+    to_type y; \
+    for (i=0; i<n; i++) { \
+        x = _from[i]; \
+        cast_command \
+        _to[i] = y; \
+    } \
+}
+/// @brief A macro that creates a to and from cast function for flints
+/// @param type The other type
+#define NPYFLINT_CAST_TOFROM(type) \
+NPYFLINT_CAST(flint, type, y = (type) x.v;) \
+NPYFLINT_CAST(type, flint, y = double_to_flint((type) x);)
+
+/// @brief Define cast functions for all interger and floating point types
+NPYFLINT_CAST_TOFROM(npy_float)
+NPYFLINT_CAST_TOFROM(npy_double)
+NPYFLINT_CAST_TOFROM(npy_longdouble)
+NPYFLINT_CAST_TOFROM(npy_bool)
+NPYFLINT_CAST_TOFROM(npy_ubyte)
+NPYFLINT_CAST_TOFROM(npy_ushort)
+NPYFLINT_CAST_TOFROM(npy_uint)
+NPYFLINT_CAST_TOFROM(npy_ulong)
+NPYFLINT_CAST_TOFROM(npy_ulonglong)
+
+//*************************************************
+//*************************************************
+// Stopped here:
+//   To do: generalize this for other method to
+//   define ufuncs for all involved
+//*************************************************
+//*************************************************
+static void npyflint_ufunc_isnan(char** args, npy_intp* dim, npy_intp* std, void* data) {
+    char* in_ptr = args[0];
+    char* out_ptr = args[1];
+    npy_intp in_std = std[0];
+    npy_intp out_std = std[2];
+    npy_intp n = dim[0];
+    npy_intp i = 0;
+    flint in_f = {0.0, 0.0, 0.0};
+    for (i=0; i<n; i++, in_ptr += in_std, out_pf += out_std) {
+        in_f = *((flint*) in_ptr);
+        *((npy_bool*) out_ptr) = flint_isnan(in_f);
+    }
+}
+
 
 // ###########################
 // ---- Module definition ----
