@@ -42,7 +42,7 @@ extensions = [
             'flint.h',
             'numpy_flint.c',
         ],
-        include_dirs=[np.get_include()],
+        include_dirs=[np.get_include(),'.'],
     )
 ]
 
@@ -56,7 +56,7 @@ setup_metadata = dict(
     description="Add a rounded floating point interval (flint) dtype to NumPy",
     long_description=__doc__,
     ext_modules=extensions,
-    install_requires=[],
+    install_requires=["numpy>=1.24"],
     extras_require={},
     version=version,
 )

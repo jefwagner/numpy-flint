@@ -924,50 +924,6 @@ static int npyflint_fillwithscalar(void* buffer, npy_intp n,
     return 0;
 }
 
-static PyArray_ArrFuncs npyflint_arrfuncs; // = {
-//     // PyArray_VectorUnaryFunc *cast[NPY_NTYPES];
-//     .getitem = npyflint_getitem, // PyArray_GetItemFunc *getitem;
-//     .setitem = npyflint_setitem, // PyArray_SetItemFunc *setitem;
-//     .copyswapn = npyflint_copyswapn, // PyArray_CopySwapNFunc *copyswapn;
-//     .copyswap = npyflint_copyswap, // PyArray_CopySwapFunc *copyswap;
-//     .compare = npyflint_compare, // PyArray_CompareFunc *compare;
-//     .argmax = npyflint_argmax, // PyArray_ArgFunc *argmax;
-//     .argmin = npyflint_argmin,
-//     .dotfunc = npyflint_dotfunc, // PyArray_DotFunc *dotfunc;
-//     // PyArray_ScanFunc *scanfunc;
-//     // PyArray_FromStrFunc *fromstr;
-//     .nonzero = npyflint_nonzero, // PyArray_NonzeroFunc *nonzero;
-//     .fill = npyflint_fill, // PyArray_FillFunc *fill;
-//     .fillwithscalar = npyflint_fillwithscalar, // PyArray_FillWithScalarFunc *fillwithscalar;
-//     // PyArray_SortFunc *sort[NPY_NSORTS];
-//     // PyArray_ArgSortFunc *argsort[NPY_NSORTS];
-//     // PyObject *castdict;
-//     // PyArray_ScalarKindFunc *scalarkind;
-//     // int **cancastscalarkindto;
-//     // int *cancastto;
-// };
-
-typedef struct {uint8_t c; flint f; } align_test;
-
-PyArray_Descr npyflint_descr = {
-    PyObject_HEAD_INIT(0)
-    .typeobj = &PyFlint_Type, // PyTypeObject *typeobj;
-    .kind = 'V', // char kind;
-    .type = 'f', // char type;
-    .byteorder = '=', // char byteorder;
-    .flags = NPY_NEEDS_PYAPI | NPY_USE_GETITEM | NPY_USE_SETITEM, // char flags;
-    .type_num = 0, // int type_num;
-    .elsize = sizeof(flint), // int elsize;
-    .alignment = offsetof(align_test, f), // int alignment;
-    .subarray = NULL, // PyArray_ArrayDescr *subarray;
-    .fields = NULL, // PyObject *fields;
-    .names = NULL, // PyObject *names;
-    .f = &npyflint_arrfuncs, // PyArray_ArrFuncs *f;
-    .metadata = NULL, // PyObject *metadata;
-    .c_metadata = NULL, // NpyAuxData *c_metadata;
-    // npy_hash_t hash;
-};
-
 // --------------------------------
 // ---- dtype to dtype casting ----
 // --------------------------------
@@ -1087,6 +1043,32 @@ NPYFLINT_UNARY_UFUNC(sqrt, flint)
 NPYFLINT_UNARY_UFUNC(exp, flint)
 NPYFLINT_UNARY_UFUNC(log, flint)
 
+/// @brief utility type to find alignment for the flint object
+typedef struct {uint8_t c; flint f; } align_test;
+/// @brief A NumPy object the holds pointers to required array methods
+/// This gets fill in in the module initialization function below
+static PyArray_ArrFuncs npyflint_arrfuncs; 
+/// @brief A pointer to the Numpy array flint description type
+/// This gets fill in in the module initialization function below
+PyArray_Descr npyflint_descr = {
+    PyObject_HEAD_INIT(0)
+    .typeobj = &PyFlint_Type, // PyTypeObject *typeobj,
+    .kind = 'V', // char kind,
+    .type = 'r', // char type,
+    .byteorder = '=', // char byteorder,
+    .flags = NPY_NEEDS_PYAPI | NPY_USE_GETITEM | NPY_USE_SETITEM, // char flags,
+    .type_num = 0, // int type_num,
+    .elsize = sizeof(flint), // int elsize,
+    .alignment = offsetof(align_test, f), // int alignment,
+    .subarray = NULL, // PyArray_ArrayDescr *subarray,
+    .fields = NULL, // PyObject *fields,
+    .names = NULL, // PyObject *names,
+    .f = &npyflint_arrfuncs, // PyArray_ArrFuncs *f,
+    .metadata = NULL, // PyObject *metadata,
+    .c_metadata = NULL // NpyAuxData *c_metadata,
+};
+
+
 // ###########################
 // ---- Module definition ----
 // ###########################
@@ -1119,6 +1101,11 @@ PyMODINIT_FUNC PyInit_numpy_flint(void) {
         PyErr_SetString(PyExc_SystemError, "Could not initialize NumPy.");
         return NULL;
     }
+    import_umath();
+    if (PyErr_Occurred()) {
+        PyErr_Print();
+        PyErr_SetString(PyExc_SystemError, "Could not initialize NumPy/umath.");
+    }
     numpy = PyImport_ImportModule("numpy");
     if (!numpy) {
         PyErr_Print();
@@ -1131,36 +1118,39 @@ PyMODINIT_FUNC PyInit_numpy_flint(void) {
         PyErr_SetString(PyExc_SystemError, "Could not access NumPy module __dict__.");
         return NULL;
     }
+
+    // Finalize the PyFlint type by having it inherit from numpy arraytype
+    PyFlint_Type.tp_base = &PyGenericArrType_Type;
     // Initialize flint type
     if (PyType_Ready(&PyFlint_Type) < 0) {
         PyErr_Print();
         PyErr_SetString(PyExc_SystemError, "Could not initialize flint type.");
         return NULL;
     }
+    Py_INCREF(&PyFlint_Type);
+
+    // Initialize the numpy data-type extension of the python type
     // Register standard arrayfuncs for numpy-flint
     PyArray_InitArrFuncs(&npyflint_arrfuncs);
-    npyflint_arrfuncs.getitem = npyflint_getitem; // PyArray_GetItemFunc *getitem;
-    npyflint_arrfuncs.setitem = npyflint_setitem; // PyArray_SetItemFunc *setitem;
-    npyflint_arrfuncs.copyswapn = npyflint_copyswapn; // PyArray_CopySwapNFunc *copyswapn;
-    npyflint_arrfuncs.copyswap = npyflint_copyswap; // PyArray_CopySwapFunc *copyswap;
-    npyflint_arrfuncs.compare = npyflint_compare; // PyArray_CompareFunc *compare;
-    npyflint_arrfuncs.argmax = npyflint_argmax; // PyArray_ArgFunc *argmax;
-    npyflint_arrfuncs.argmin = npyflint_argmin;
-    npyflint_arrfuncs.dotfunc = npyflint_dotfunc; // PyArray_DotFunc *dotfunc;
-    npyflint_arrfuncs.nonzero = npyflint_nonzero; // PyArray_NonzeroFunc *nonzero;
-    npyflint_arrfuncs.fill = npyflint_fill; // PyArray_FillFunc *fill;
-    npyflint_arrfuncs.fillwithscalar = npyflint_fillwithscalar; // PyArray_FillWithScalarFunc *fillwithscalar;
-    // Increase the flint-type reference count?
-    Py_INCREF(&PyFlint_Type);
-    // Register the new flint-type with numpy
+    npyflint_arrfuncs.getitem = (PyArray_GetItemFunc*) npyflint_getitem; // PyArray_GetItemFunc *getitem;
+    npyflint_arrfuncs.setitem = (PyArray_SetItemFunc*) npyflint_setitem; // PyArray_SetItemFunc *setitem;
+    npyflint_arrfuncs.copyswapn = (PyArray_CopySwapNFunc*) npyflint_copyswapn; // PyArray_CopySwapNFunc *copyswapn;
+    npyflint_arrfuncs.copyswap = (PyArray_CopySwapFunc*) npyflint_copyswap; // PyArray_CopySwapFunc *copyswap;
+    // npyflint_arrfuncs.compare = (PyArray_CompareFunc*) npyflint_compare; // PyArray_CompareFunc *compare;
+    // npyflint_arrfuncs.argmax = (PyArray_ArgFunc*) npyflint_argmax; // PyArray_ArgFunc *argmax;
+    // npyflint_arrfuncs.argmin = (PyArray_ArgFunc*) npyflint_argmin;
+    // npyflint_arrfuncs.dotfunc = (PyArray_DotFunc*) npyflint_dotfunc; // PyArray_DotFunc *dotfunc;
+    npyflint_arrfuncs.nonzero = (PyArray_NonzeroFunc*) npyflint_nonzero; // PyArray_NonzeroFunc *nonzero;
+    // npyflint_arrfuncs.fill = (PyArray_FillFunc*) npyflint_fill; // PyArray_FillFunc *fill;
+    // npyflint_arrfuncs.fillwithscalar = (PyArray_FillWithScalarFunc*) npyflint_fillwithscalar; // PyArray_FillWithScalarFunc *fillwithscalar;
+    // Register the numpy flint dtype with numpy
+    Py_SET_TYPE(&npyflint_descr,  &PyArrayDescr_Type);
     npy_flint = PyArray_RegisterDataType(&npyflint_descr);
     if (npy_flint) {
         PyErr_Print();
-        PyErr_SetString(PyExc_SystemError, "Could not regiter flint type with numpy.");
+        PyErr_SetString(PyExc_SystemError, "Could not register flint type with numpy.");
         return NULL;
     }
-    // Register all the 'safe' cast that wont lose information (dont' know about
-    // long, and longlong - should I also include longdouble)
     // Macros for registering casting functions
     #define  REGISTER_CASTTOFROM(typenum, type) \
     PyArray_RegisterCastFunc(&npyflint_descr, typenum, (PyArray_VectorUnaryFunc*) npycast_flint_##type); \
@@ -1174,7 +1164,8 @@ PyMODINIT_FUNC PyInit_numpy_flint(void) {
     PyArray_RegisterCastFunc(descr_##type, npy_flint, (PyArray_VectorUnaryFunc*) npycast_##type##_flint); \
     PyArray_RegisterCanCast(descr_##type, npy_flint, NPY_FLOAT_SCALAR); \
     Py_DECREF(descr_##type);
-    // we can from any real type, and to doubles and long doubles
+    // we can cast from any real type, and can safely cast to doubles and long
+    // doubles
     REGISTER_CASTFROM(NPY_BOOL, npy_bool)
     REGISTER_CASTFROM(NPY_BYTE, npy_byte)
     REGISTER_CASTFROM(NPY_SHORT, npy_short)
