@@ -25,9 +25,16 @@ Rounded floating point intervals, which I'm calling `flint`s, are able to addres
 
 [^1] There are four approved methods of rounding, but it doesn't matter which one is chosen, the rounded interval arithmetic will alway be make the same guarantee.
 
+## To Do
+
+- [ ] Write documentation
+- [ ] Write test suite
+- [ ] Extend to trig functions
+- [ ] Publish
+
 ## References
 
-* [Patrikalakis et al](https://web.mit.edu/hyperbook/Patrikalakis-Maekawa-Cho/node46.html) contains details of the mathematical implementation of the flint objecs
+* [Patrikalakis et al](https://web.mit.edu/hyperbook/Patrikalakis-Maekawa-Cho/node46.html) contains details of the mathematical implementation of the flint objects
 * The [Extending and Embedding the Python Interpreter](https://docs.python.org/3/extending/index.html) documentation contain details and examples on how to write c code to interface with python.
 * The [Python/C API Reference Manual](https://docs.python.org/3/c-api/index.html) has all the details needed for extending python with c.
 * The [NumPy C API](https://numpy.org/doc/stable/reference/c-api/index.html) has all the details need for interfacing numpy using c.

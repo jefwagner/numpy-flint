@@ -23,6 +23,7 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 #include <numpy/npy_math.h>
+// #include <numpy/halffloat.h>
 #include <numpy/ufuncobject.h>
 #include "structmember.h"
 
@@ -460,7 +461,7 @@ BINARY_TO_TERTIARY_INPLACE(power)
 static PyObject* pyflint_float(PyObject* a) {
     flint f = {0.0, 0.0, 0.0};
     PyFlint_CheckedGetFlint(f, a);
-    return PyFloat_FromDouble(flint_to_double(f));
+    return PyFloat_FromDouble(f.v);
 }
 
 // -----------------------------------------
@@ -713,7 +714,8 @@ static int npyflint_setitem(PyObject* item, void* data, void* arr) {
                 "expected flint or numeric type.");
             return -1;
         }
-        f = double_to_flint(PyFloat_AsDouble(item));
+        f = double_to_flint(PyFloat_AsDouble(D));
+        Py_DECREF(D);
     }
     memcpy(data, &f, sizeof(flint));
     return 0;
@@ -757,12 +759,12 @@ static void npyflint_copyswapn(void* dst, npy_intp dstride,
                             n*sizeof(flint)/sizeof(double), swap, arr);
     } else {
         // Else we make a call for each double in the struct
-        descr->f->copyswapn(&(_dst->a), sizeof(double), &(_src->a), sizeof(double), 
-                            n*sizeof(flint)/sizeof(double), swap, arr);
-        descr->f->copyswapn(&(_dst->b), sizeof(double), &(_src->b), sizeof(double), 
-                            n*sizeof(flint)/sizeof(double), swap, arr);
-        descr->f->copyswapn(&(_dst->v), sizeof(double), &(_src->v), sizeof(double), 
-                            n*sizeof(flint)/sizeof(double), swap, arr);
+        descr->f->copyswapn(&(_dst->a), dstride, &(_src->a), sstride, 
+                            n, swap, arr);
+        descr->f->copyswapn(&(_dst->b), dstride, &(_src->a), sstride, 
+                            n, swap, arr);
+        descr->f->copyswapn(&(_dst->v), dstride, &(_src->a), sstride, 
+                            n, swap, arr);
     }
     Py_DECREF(descr);
 }
@@ -900,7 +902,7 @@ static int npyflint_fill(void* data, npy_intp n, void* arr) {
         return 0;
     }
     flint* fp = (flint*) data;
-    flint delta = flint_subtract(fp[0], fp[1]);
+    flint delta = flint_subtract(fp[1], fp[0]);
     npy_intp i = 2;
     for( i=2; i<n; i++) {
         fp[i] = flint_add(fp[0], flint_multiply_scalar(delta, (double) i));
@@ -927,49 +929,124 @@ static int npyflint_fillwithscalar(void* buffer, npy_intp n,
 // --------------------------------
 // ---- dtype to dtype casting ----
 // --------------------------------
-/// @brief A macro defining a conversion between types
-/// @param from_type The type being casting from
-/// @param to_type The type being cast to
-/// @param cast_command The command(s) needed to cast between types
-#define NPYFLINT_CAST(from_type, to_type, cast_command) \
-static void npycast_##from_type##_##to_type(void *from, void *to, npy_intp n, \
-                                            void *fromarr, void *toarr) { \
-    from_type* _from = (from_type*) from; \
-    to_type* _to = (to_type*) to; \
+// The section contains all the casting functions between the new type and 18
+// existing numpy types. They all have the same signature (enforced by numpy)
+// and naming convention (chosen by me) `npycase_sourcetype_desttype`
+// ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// ---- dtype to flint casting ----
+// ````````````````````````````````
+// For the most part this section uses the existing c casting from numeric types
+// to double.
+/// @brief A macro to conversions from real scalar type to flint
+/// @param npy_dtype_num The NumPy dtype number
+#define SCALAR_TO_FLINT(npy_dtype_num, type) \
+static void npycast_##type##_flint(void* from, void* to, npy_intp n, \
+                                   void* fromarr, void* toarr) { \
+    type* _from = (type*) from; \
+    flint* _to = (flint*) to; \
     npy_intp i = 0; \
-    from_type x; \
-    to_type y; \
     for (i=0; i<n; i++) { \
-        x = _from[i]; \
-        cast_command \
-        _to[i] = y; \
+        _to[i] = double_to_flint(((double) _from[i])); \
     } \
 }
-/// @brief A macro that creates only a from cast function for flints
-/// @param type The other type
-#define NPYFLINT_CAST_FROM(type) \
-NPYFLINT_CAST(type, flint, y = double_to_flint((double) x);)
-/// @brief A macro that creates only a from cast function for flints
-/// @param type The other type
-#define NPYFLINT_CAST_TOFROM(type) \
-NPYFLINT_CAST(flint, type, y = (type) x.v;) \
-NPYFLINT_CAST(type, flint, y = double_to_flint((double) x);)
-
-/// @brief Define cast functions for all interger and floating point types
-NPYFLINT_CAST_FROM(npy_float)
-NPYFLINT_CAST_TOFROM(npy_double)
-NPYFLINT_CAST_TOFROM(npy_longdouble)
-NPYFLINT_CAST_FROM(npy_bool)
-NPYFLINT_CAST_FROM(npy_byte)
-NPYFLINT_CAST_FROM(npy_short)
-NPYFLINT_CAST_FROM(npy_int)
-NPYFLINT_CAST_FROM(npy_long)
-NPYFLINT_CAST_FROM(npy_longlong)
-NPYFLINT_CAST_FROM(npy_ubyte)
-NPYFLINT_CAST_FROM(npy_ushort)
-NPYFLINT_CAST_FROM(npy_uint)
-NPYFLINT_CAST_FROM(npy_ulong)
-NPYFLINT_CAST_FROM(npy_ulonglong)
+/// @brief A macro to conversions from complex type to flint
+/// @param npy_dtype_num The NumPy dtype number
+#define COMPLEX_TO_FLINT(npy_ctype_num, ctype) \
+static void npycast_##ctype##_flint(void* from, void* to, npy_intp n, \
+                                    void* fromarr, void* toarr) { \
+    ctype* _from = (ctype*) from; \
+    flint* _to = (flint*) to; \
+    npy_intp i = 0; \
+    for (i=0; i<n; i++) { \
+        _to[i] = double_to_flint(((double) _from[i].real)); \
+    } \
+}
+// All integers
+SCALAR_TO_FLINT(NPY_BOOL, npy_bool)
+SCALAR_TO_FLINT(NPY_BYTE, npy_byte)
+SCALAR_TO_FLINT(NPY_SHORT, npy_short)
+SCALAR_TO_FLINT(NPY_INT, npy_int)
+SCALAR_TO_FLINT(NPY_LONG, npy_long)
+SCALAR_TO_FLINT(NPY_LONGLONG, npy_longlong)
+SCALAR_TO_FLINT(NPY_UBYTE, npy_ubyte)
+SCALAR_TO_FLINT(NPY_USHORT, npy_ushort)
+SCALAR_TO_FLINT(NPY_UINT, npy_uint)
+SCALAR_TO_FLINT(NPY_ULONG, npy_ulong)
+SCALAR_TO_FLINT(NPY_ULONGLONG, npy_ulonglong)
+// real floating points
+// static void npycast_npy_half_flint(void* from, void* to, npy_intp n,
+//                                    void* fromarr, void* toarr) {
+//     npy_half* _from = (npy_half*) from;
+//     flint* _to = (flint*) to;
+//     npy_half h = 0.0;
+//     flint f = {0.0, 0.0, 0.0};
+//     npy_intp i = 0;
+//     for (i=0; i<n; i++) {
+//         h = _from[i];
+//         f.a = npy_half_to_double(npy_half_nextafter(h, NPY_HALF_NINF));
+//         f.b = npy_half_to_double(npy_half_nextafter(h, NPY_HALF_PINF));
+//         f.v = npy_half_to_double(h);
+//         _to[i] = f;
+//     }
+// }
+static void npycast_npy_float_flint(void* from, void* to, npy_intp n,
+                                    void* fromarr, void* toarr) {
+    npy_float* _from = (npy_float*) from;
+    flint* _to = (flint*) to;
+    npy_intp i = 0;
+    for (i=0; i<n; i++) {
+        _to[i] = float_to_flint(_from[i]);
+    }
+}
+SCALAR_TO_FLINT(NPY_DOUBLE, npy_double)
+SCALAR_TO_FLINT(NPY_LONGDOUBLE, npy_longdouble)
+// complex floatin points
+static void npycast_npy_cfloat_flint(void* from, void* to, npy_intp n,
+                                     void* fromarr, void* toarr) {
+    npy_cfloat* _from = (npy_cfloat*) from;
+    flint* _to = (flint*) to;
+    npy_intp i = 0;
+    for (i=0; i<n; i++) {
+        _to[i] = float_to_flint(_from[i].real);
+    }
+}
+COMPLEX_TO_FLINT(NPY_CDOUBLE, npy_cdouble)
+COMPLEX_TO_FLINT(NPY_CLONGDOUBLE, npy_clongdouble)
+// ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+// ---- dtype to flint casting ----
+// ````````````````````````````````
+// This section use's the v value and then the pre-defined numpy rules to for
+// doubles
+#define FLINT_TO_TYPE(npy_type_num, type) \
+static void npycast_flint_##type(void* src, void* dst, npy_intp n, \
+                                 void* srcarr, void* dstarr) { \
+    PyArray_Descr* descr = PyArray_DescrFromType(NPY_DOUBLE); \
+    flint* _src = (flint*) src; \
+    type* _dst = (type*) dst; \
+    npy_intp i = 0; \
+    for (i=0; i<n; i++) { \
+        descr->f->cast[npy_type_num](&(_src[i].v), &(_dst[i]), n, NULL, NULL); \
+    } \
+    Py_DECREF(descr); \
+}
+FLINT_TO_TYPE(NPY_BOOL, npy_bool)
+FLINT_TO_TYPE(NPY_BYTE, npy_byte)
+FLINT_TO_TYPE(NPY_SHORT, npy_short)
+FLINT_TO_TYPE(NPY_INT, npy_int)
+FLINT_TO_TYPE(NPY_LONG, npy_long)
+FLINT_TO_TYPE(NPY_LONGLONG, npy_longlong)
+FLINT_TO_TYPE(NPY_UBYTE, npy_ubyte)
+FLINT_TO_TYPE(NPY_USHORT, npy_ushort)
+FLINT_TO_TYPE(NPY_UINT, npy_uint)
+FLINT_TO_TYPE(NPY_ULONG, npy_ulong)
+FLINT_TO_TYPE(NPY_ULONGLONG, npy_ulonglong)
+//FLINT_TO_TYPE(NPY_HALF, npy_half)
+FLINT_TO_TYPE(NPY_FLOAT, npy_float)
+FLINT_TO_TYPE(NPY_DOUBLE, npy_double)
+FLINT_TO_TYPE(NPY_LONGDOUBLE, npy_longdouble)
+FLINT_TO_TYPE(NPY_CFLOAT, npy_cfloat)
+FLINT_TO_TYPE(NPY_CDOUBLE, npy_cdouble)
+FLINT_TO_TYPE(NPY_CLONGDOUBLE, npy_clongdouble)
 
 /// @brief Macro to define the internal loop for a universal function
 /// @param name The name of the function in c, Python and now NumPy
@@ -1050,24 +1127,7 @@ typedef struct {uint8_t c; flint f; } align_test;
 static PyArray_ArrFuncs npyflint_arrfuncs; 
 /// @brief A pointer to the Numpy array flint description type
 /// This gets fill in in the module initialization function below
-PyArray_Descr npyflint_descr = {
-    PyObject_HEAD_INIT(0)
-    .typeobj = &PyFlint_Type, // PyTypeObject *typeobj,
-    .kind = 'V', // char kind,
-    .type = 'r', // char type,
-    .byteorder = '=', // char byteorder,
-    .flags = NPY_NEEDS_PYAPI | NPY_USE_GETITEM | NPY_USE_SETITEM, // char flags,
-    .type_num = 0, // int type_num,
-    .elsize = sizeof(flint), // int elsize,
-    .alignment = offsetof(align_test, f), // int alignment,
-    .subarray = NULL, // PyArray_ArrayDescr *subarray,
-    .fields = NULL, // PyObject *fields,
-    .names = NULL, // PyObject *names,
-    .f = &npyflint_arrfuncs, // PyArray_ArrFuncs *f,
-    .metadata = NULL, // PyObject *metadata,
-    .c_metadata = NULL // NpyAuxData *c_metadata,
-};
-
+PyArray_Descr* npyflint_descr;
 
 // ###########################
 // ---- Module definition ----
@@ -1082,11 +1142,13 @@ static struct PyModuleDef moduledef = {
 
 /// @brief The module initialization function
 PyMODINIT_FUNC PyInit_numpy_flint(void) {
-    PyObject *m;
-    int npy_flint;
+    PyObject* m;
+    PyObject* numpy;
+    PyObject* numpy_dict;
+    PyArray_Descr* npyflint_descr;
+    int NPY_FLINT;
+    PyArray_Descr* from_descr;
     int arg_types[3];
-    PyObject *numpy;
-    PyObject *numpy_dict;
     // Create the new module
     m = PyModule_Create(&moduledef);
     if (m==NULL) {
@@ -1136,66 +1198,117 @@ PyMODINIT_FUNC PyInit_numpy_flint(void) {
     npyflint_arrfuncs.setitem = (PyArray_SetItemFunc*) npyflint_setitem; // PyArray_SetItemFunc *setitem;
     npyflint_arrfuncs.copyswapn = (PyArray_CopySwapNFunc*) npyflint_copyswapn; // PyArray_CopySwapNFunc *copyswapn;
     npyflint_arrfuncs.copyswap = (PyArray_CopySwapFunc*) npyflint_copyswap; // PyArray_CopySwapFunc *copyswap;
-    // npyflint_arrfuncs.compare = (PyArray_CompareFunc*) npyflint_compare; // PyArray_CompareFunc *compare;
-    // npyflint_arrfuncs.argmax = (PyArray_ArgFunc*) npyflint_argmax; // PyArray_ArgFunc *argmax;
-    // npyflint_arrfuncs.argmin = (PyArray_ArgFunc*) npyflint_argmin;
-    // npyflint_arrfuncs.dotfunc = (PyArray_DotFunc*) npyflint_dotfunc; // PyArray_DotFunc *dotfunc;
+    npyflint_arrfuncs.compare = (PyArray_CompareFunc*) npyflint_compare; // PyArray_CompareFunc *compare;
+    npyflint_arrfuncs.argmax = (PyArray_ArgFunc*) npyflint_argmax; // PyArray_ArgFunc *argmax;
+    npyflint_arrfuncs.argmin = (PyArray_ArgFunc*) npyflint_argmin;
+    npyflint_arrfuncs.dotfunc = (PyArray_DotFunc*) npyflint_dotfunc; // PyArray_DotFunc *dotfunc;
     npyflint_arrfuncs.nonzero = (PyArray_NonzeroFunc*) npyflint_nonzero; // PyArray_NonzeroFunc *nonzero;
-    // npyflint_arrfuncs.fill = (PyArray_FillFunc*) npyflint_fill; // PyArray_FillFunc *fill;
-    // npyflint_arrfuncs.fillwithscalar = (PyArray_FillWithScalarFunc*) npyflint_fillwithscalar; // PyArray_FillWithScalarFunc *fillwithscalar;
-    // Register the numpy flint dtype with numpy
-    Py_SET_TYPE(&npyflint_descr,  &PyArrayDescr_Type);
-    npy_flint = PyArray_RegisterDataType(&npyflint_descr);
-    if (npy_flint) {
+    npyflint_arrfuncs.fill = (PyArray_FillFunc*) npyflint_fill; // PyArray_FillFunc *fill;
+    npyflint_arrfuncs.fillwithscalar = (PyArray_FillWithScalarFunc*) npyflint_fillwithscalar; // PyArray_FillWithScalarFunc *fillwithscalar;
+    // Register the componenet of the descr object for the flint
+    npyflint_descr = PyObject_New(PyArray_Descr, &PyArrayDescr_Type);
+    npyflint_descr->typeobj = &PyFlint_Type; // PyTypeObject *typeobj;
+    npyflint_descr->kind = 'V'; // char kind;
+    npyflint_descr->type = 'r'; // char type;
+    npyflint_descr->byteorder = '='; // char byteorder;
+    npyflint_descr->flags = NPY_NEEDS_PYAPI | NPY_USE_GETITEM | NPY_USE_SETITEM; // char flags;
+    npyflint_descr->type_num = 0; // int type_num;
+    npyflint_descr->elsize = sizeof(flint); // int elsize;
+    npyflint_descr->alignment = offsetof(align_test, f); // int alignment;
+    npyflint_descr->subarray = NULL; // PyArray_ArrayDescr *subarray;
+    npyflint_descr->fields = NULL; // PyObject *fields;
+    npyflint_descr->names = NULL; // PyObject *names;
+    npyflint_descr->f = &npyflint_arrfuncs; // PyArray_ArrFuncs *f;
+    npyflint_descr->metadata = NULL; // PyObject *metadata;
+    npyflint_descr->c_metadata = NULL; // NpyAuxData *c_metadata;
+
+    NPY_FLINT = PyArray_RegisterDataType(npyflint_descr);
+    if (NPY_FLINT < 0) {
         PyErr_Print();
         PyErr_SetString(PyExc_SystemError, "Could not register flint type with numpy.");
         return NULL;
     }
-    // Macros for registering casting functions
-    #define  REGISTER_CASTTOFROM(typenum, type) \
-    PyArray_RegisterCastFunc(&npyflint_descr, typenum, (PyArray_VectorUnaryFunc*) npycast_flint_##type); \
-    PyArray_RegisterCanCast(&npyflint_descr, typenum, NPY_FLOAT_SCALAR); \
-    PyArray_Descr *descr_##type = PyArray_DescrFromType(typenum); \
-    PyArray_RegisterCastFunc(descr_##type, npy_flint, (PyArray_VectorUnaryFunc*) npycast_##type##_flint); \
-    PyArray_RegisterCanCast(descr_##type, npy_flint, NPY_FLOAT_SCALAR); \
-    Py_DECREF(descr_##type);
-    #define  REGISTER_CASTFROM(typenum, type) \
-    PyArray_Descr *descr_##type = PyArray_DescrFromType(typenum); \
-    PyArray_RegisterCastFunc(descr_##type, npy_flint, (PyArray_VectorUnaryFunc*) npycast_##type##_flint); \
-    PyArray_RegisterCanCast(descr_##type, npy_flint, NPY_FLOAT_SCALAR); \
-    Py_DECREF(descr_##type);
-    // we can cast from any real type, and can safely cast to doubles and long
-    // doubles
-    REGISTER_CASTFROM(NPY_BOOL, npy_bool)
-    REGISTER_CASTFROM(NPY_BYTE, npy_byte)
-    REGISTER_CASTFROM(NPY_SHORT, npy_short)
-    REGISTER_CASTFROM(NPY_INT, npy_int)
-    REGISTER_CASTFROM(NPY_LONG, npy_long)
-    REGISTER_CASTFROM(NPY_LONGLONG, npy_longlong)
-    REGISTER_CASTFROM(NPY_UBYTE, npy_ubyte)
-    REGISTER_CASTFROM(NPY_USHORT, npy_ushort)
-    REGISTER_CASTFROM(NPY_UINT, npy_uint)
-    REGISTER_CASTFROM(NPY_ULONG, npy_ulong)
-    REGISTER_CASTFROM(NPY_ULONGLONG, npy_ulonglong)
-    REGISTER_CASTFROM(NPY_FLOAT, npy_float)
-    REGISTER_CASTTOFROM(NPY_DOUBLE, npy_double)
-    REGISTER_CASTTOFROM(NPY_LONGDOUBLE, npy_longdouble)
-    // Register the universal functions for new type with numpy 
+
+    // Register all casting from flint to all
+    #define REGISTER_CAST_FROM_FLINT(typenum, type) \
+    PyArray_RegisterCastFunc(npyflint_descr, typenum, npycast_flint_##type);
+    REGISTER_CAST_FROM_FLINT(NPY_BOOL, npy_bool)
+    REGISTER_CAST_FROM_FLINT(NPY_BYTE, npy_byte)
+    REGISTER_CAST_FROM_FLINT(NPY_SHORT, npy_short)
+    REGISTER_CAST_FROM_FLINT(NPY_INT, npy_int)
+    REGISTER_CAST_FROM_FLINT(NPY_LONG, npy_long)
+    REGISTER_CAST_FROM_FLINT(NPY_LONGLONG, npy_longlong)
+    REGISTER_CAST_FROM_FLINT(NPY_UBYTE, npy_ubyte)
+    REGISTER_CAST_FROM_FLINT(NPY_USHORT, npy_ushort)
+    REGISTER_CAST_FROM_FLINT(NPY_UINT, npy_uint)
+    REGISTER_CAST_FROM_FLINT(NPY_ULONG, npy_ulong)
+    REGISTER_CAST_FROM_FLINT(NPY_ULONGLONG, npy_ulonglong)
+    // REGISTER_CAST_FROM_FLINT(NPY_HALF, npy_half)
+    REGISTER_CAST_FROM_FLINT(NPY_FLOAT, npy_float)
+    REGISTER_CAST_FROM_FLINT(NPY_DOUBLE, npy_double)
+    REGISTER_CAST_FROM_FLINT(NPY_LONGDOUBLE, npy_longdouble)
+    REGISTER_CAST_FROM_FLINT(NPY_CFLOAT, npy_cfloat)
+    REGISTER_CAST_FROM_FLINT(NPY_CDOUBLE, npy_cdouble)
+    REGISTER_CAST_FROM_FLINT(NPY_CLONGDOUBLE, npy_clongdouble)
+
+    // Register casting from all to flint
+    #define REGISTER_CAST_TO_FLINT(typenum, type) \
+    from_descr = PyArray_DescrFromType(typenum); \
+    PyArray_RegisterCastFunc(from_descr, NPY_FLINT, npycast_##type##_flint); \
+    Py_DECREF(from_descr);
+    REGISTER_CAST_TO_FLINT(NPY_BOOL, npy_bool)
+    REGISTER_CAST_TO_FLINT(NPY_BYTE, npy_byte)
+    REGISTER_CAST_TO_FLINT(NPY_SHORT, npy_short)
+    REGISTER_CAST_TO_FLINT(NPY_INT, npy_int)
+    REGISTER_CAST_TO_FLINT(NPY_LONG, npy_long)
+    REGISTER_CAST_TO_FLINT(NPY_LONGLONG, npy_longlong)
+    REGISTER_CAST_TO_FLINT(NPY_UBYTE, npy_ubyte)
+    REGISTER_CAST_TO_FLINT(NPY_USHORT, npy_ushort)
+    REGISTER_CAST_TO_FLINT(NPY_UINT, npy_uint)
+    REGISTER_CAST_TO_FLINT(NPY_ULONG, npy_ulong)
+    REGISTER_CAST_TO_FLINT(NPY_ULONGLONG, npy_ulonglong)
+    // REGISTER_CAST_TO_FLINT(NPY_HALF, npy_half)
+    REGISTER_CAST_TO_FLINT(NPY_FLOAT, npy_float)
+    REGISTER_CAST_TO_FLINT(NPY_DOUBLE, npy_double)
+    REGISTER_CAST_TO_FLINT(NPY_LONGDOUBLE, npy_longdouble)
+    REGISTER_CAST_TO_FLINT(NPY_CFLOAT, npy_cfloat)
+    REGISTER_CAST_TO_FLINT(NPY_CDOUBLE, npy_cdouble)
+    REGISTER_CAST_TO_FLINT(NPY_CLONGDOUBLE, npy_clongdouble)
+    // Registering with coersion rules
+    // Anything with less precision can be coerced into a flint
+    #define REGISTER_COERSION_FROM(typenum, type) \
+    from_descr = PyArray_DescrFromType(typenum); \
+    PyArray_RegisterCanCast(from_descr, NPY_FLINT, NPY_NOSCALAR); \
+    Py_DECREF(from_descr);
+    REGISTER_COERSION_FROM(NPY_BOOL, npy_bool)
+    REGISTER_COERSION_FROM(NPY_BYTE, npy_byte)
+    REGISTER_COERSION_FROM(NPY_SHORT, npy_short)
+    REGISTER_COERSION_FROM(NPY_INT, npy_int)
+    REGISTER_COERSION_FROM(NPY_LONG, npy_long)
+    REGISTER_COERSION_FROM(NPY_LONGLONG, npy_longlong)
+    REGISTER_COERSION_FROM(NPY_UBYTE, npy_ubyte)
+    REGISTER_COERSION_FROM(NPY_USHORT, npy_ushort)
+    REGISTER_COERSION_FROM(NPY_UINT, npy_uint)
+    REGISTER_COERSION_FROM(NPY_ULONG, npy_ulong)
+    REGISTER_COERSION_FROM(NPY_ULONGLONG, npy_ulonglong)
+    // REGISTER_COERSION_FROM(NPY_HALF, npy_half)
+    REGISTER_COERSION_FROM(NPY_FLOAT, npy_float)
+    REGISTER_COERSION_FROM(NPY_DOUBLE, npy_double)
     // Small macro for registering methods that match name with existing numpy
     // functions
     #define REGISTER_UFUNC(npname, flname) \
     PyUFunc_RegisterLoopForType((PyUFuncObject*) PyDict_GetItemString(numpy_dict, #npname), \
-                                npyflint_descr.type_num, npyflint_ufunc_##flname, arg_types, NULL);
+                                NPY_FLINT, npyflint_ufunc_##flname, arg_types, NULL);
     // These are sorted by number and types of arguments and return value
     // flint -> bool
-    arg_types[0] = npyflint_descr.type_num;
+    arg_types[0] = NPY_FLINT;
     arg_types[1] = NPY_BOOL;
     REGISTER_UFUNC(isnan, isnan)
     REGISTER_UFUNC(isinf, isinf)
     REGISTER_UFUNC(isfinite, isfinite)
     // flint -> flint
-    arg_types[0] = npyflint_descr.type_num;
-    arg_types[1] = npyflint_descr.type_num;
+    arg_types[0] = NPY_FLINT;
+    arg_types[1] = NPY_FLINT;
     REGISTER_UFUNC(absolute, absolute)
     REGISTER_UFUNC(negative, negative)
     REGISTER_UFUNC(positive, positive)
@@ -1203,8 +1316,8 @@ PyMODINIT_FUNC PyInit_numpy_flint(void) {
     REGISTER_UFUNC(exp, exp)
     REGISTER_UFUNC(log, log)
     // flint, flint -> bool
-    arg_types[0] = npyflint_descr.type_num;
-    arg_types[1] = npyflint_descr.type_num;
+    arg_types[0] = NPY_FLINT;
+    arg_types[1] = NPY_FLINT;
     arg_types[2] = NPY_BOOL;
     REGISTER_UFUNC(equal, eq)
     REGISTER_UFUNC(not_equal, ne)
@@ -1213,9 +1326,9 @@ PyMODINIT_FUNC PyInit_numpy_flint(void) {
     REGISTER_UFUNC(greater, gt)
     REGISTER_UFUNC(greater_equal, ge)
     // flint, flint -> flint
-    arg_types[0] = npyflint_descr.type_num;
-    arg_types[1] = npyflint_descr.type_num;
-    arg_types[2] = npyflint_descr.type_num;
+    arg_types[0] = NPY_FLINT;
+    arg_types[1] = NPY_FLINT;
+    arg_types[2] = NPY_FLINT;
     REGISTER_UFUNC(add, add)
     REGISTER_UFUNC(subtract, subtract)
     REGISTER_UFUNC(multiply, multiply)

@@ -81,13 +81,6 @@ typedef struct {
 //
 // Conversions
 //
-// Cast to a simple floating point pulls out the tracked value
-static NPY_INLINE float flint_to_float(flint f) {
-    return (float) f.v;
-}
-static NPY_INLINE double flint_to_double(flint f) {
-    return f.v;
-}
 // Cast from a simple floating point create smallest interval surrounding it
 static NPY_INLINE flint double_to_flint(double f) {
     return (flint) {
