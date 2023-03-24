@@ -536,6 +536,13 @@ UNARY_TO_SELF_METHOD(exp)
 /// @brief Defines the flint methods accessible for flint objects in python 
 /// the list structure is (name, function, ARGTYPE_MACRO, description)
 PyMethodDef pyflint_methods[] = {
+    // Pickle support functions
+    {"__reduce__", pyflint_reduce, METH_NOARGS,
+    "Return state information for pickling"},
+    {"__getstate__", pyflint_getstate, METH_VARARGS,
+    "Return state information for pickling"},
+    {"__setstate__", pyflint_setstate, METH_VARARGS,
+    "Reconstruct state information from pickle"},
     // methods for querying special float values
     {"nonzero", pyflint_nonzero_meth, METH_NOARGS,
     "True if the interval does not inersect zero"},
@@ -545,18 +552,13 @@ PyMethodDef pyflint_methods[] = {
     "True if the interval extends to +/-infinity"},
     {"isfinite", pyflint_isfinite_meth, METH_NOARGS,
     "True if the interval has covers a finite range"},
+    // Math functions
     {"sqrt", pyflint_sqrt_meth, METH_NOARGS,
     "Evaluate the square root of the interval"},
     {"log", pyflint_log_meth, METH_NOARGS,
     "Evaluate the natural log of the interval"},
     {"exp", pyflint_exp_meth, METH_NOARGS,
     "Evaluate the exponential func of an interval"},
-    {"__reduce__", pyflint_reduce, METH_NOARGS,
-    "Return state information for pickling"},
-    {"__getstate__", pyflint_getstate, METH_VARARGS,
-    "Return state information for pickling"},
-    {"__setstate__", pyflint_setstate, METH_VARARGS,
-    "Reconstruct state information from pickle"},
     // sentinel
     {NULL, NULL, 0, NULL}
 };
@@ -587,7 +589,7 @@ static PyObject* pyflint_get_interval(PyObject* self,
 }
 
 /// @brief Set the flint from an interval
-/// This defines a member proper setter for the flint interval. You can use it
+/// This defines a member property setter for the flint interval. You can use it
 /// to either set the endpoints `f.interval = (a,b)`, in which case the
 /// tracked value will be the midpoint `v =0.5* (a+b)'. You can also set the
 /// interval AND tracked value `f.interval = (a,b,v)`
