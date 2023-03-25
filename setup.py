@@ -37,12 +37,12 @@ extra_compiler_args = ['-fmax_errors=5']
 extensions = [
     Extension(
         name='flint.numpy_flint',
-        sources=['numpy_flint.c'],
+        sources=['src/numpy_flint.c'],
         depends=[
-            'flint.h',
-            'numpy_flint.c',
+            'src/flint.h',
+            'src/numpy_flint.c',
         ],
-        include_dirs=[np.get_include(),'.'],
+        include_dirs=[np.get_include(),'src'],
     )
 ]
 
@@ -56,7 +56,7 @@ setup_metadata = dict(
     description="Add a rounded floating point interval (flint) dtype to NumPy",
     long_description=__doc__,
     ext_modules=extensions,
-    install_requires=["numpy>=1.24"],
+    install_requires=["numpy>=1.22"],
     extras_require={},
     version=version,
 )

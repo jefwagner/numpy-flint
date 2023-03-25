@@ -23,6 +23,7 @@ extern "C" {
 #endif
 
 #include <math.h>
+#include <stdio.h>
 
 #if defined(__GNUC__)
     #if defined(__STRICT_ANSI__)
@@ -81,6 +82,19 @@ typedef struct {
 //
 // Conversions
 //
+// Cast from a integer as an exact value if possible, otherwise expand the 
+// interval
+#define MAX_DOUBLE_INT 9.007199254740991e15
+#define MIN_DOUBLE_INT -9.007199254740991e15
+static NPY_INLINE flint int_to_flint(long long l) {
+    double d = (double) l;
+    flint f = {d, d, d};
+    if (d > MAX_DOUBLE_INT || d < MIN_DOUBLE_INT) {
+        f.a = nextafter(d,-INFINITY);
+        f.b = nextafter(d,INFINITY);
+    }
+    return f;
+}
 // Cast from a simple floating point create smallest interval surrounding it
 static NPY_INLINE flint double_to_flint(double f) {
     return (flint) {

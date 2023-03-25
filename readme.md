@@ -21,7 +21,7 @@ y = flint(0.6)
 print( (x+x+x) == y )
 ```
 
-To use with NumPy, import NumPy as well (first?). Mark the array's data-type or dtype as `flint`.
+To use with NumPy, import NumPy as well (first?). Mark the array's dtype as `flint`.
 ```py
 import numpy as np
 from flint import flint
@@ -36,7 +36,7 @@ As of right now, the package is still in early development and there are several
 
 # The problem with computers and numbers
 
-Computers are math machines, and an some sense all they do is use simple math to manipulate numbers (we will ignore strings - they greatly complicate things). And At the peril of great generalization there are two ways to represent numbers with computers, integers and floating point numbers. And as a developer, the first choice is to use integers if they are an option. However in many cases we need more than just integers, whether is fractions when we need numbers between integers, even (gasp) irrational numbers. In those cases, we switch to floating point numbers, since they are not integers and move on our way. We tend to treat floating point numbers as the most general of number, a real number. And this works most of the time ... until it doesn't. Let's look at why they don't always work, and examine some of the odd consequences.
+Computers are math machines, and in some sense all they do is use simple math to manipulate numbers (we will ignore strings - they greatly complicate things). And At the peril of great generalization there are two ways to represent numbers with computers, integers and floating point numbers. As a developer, the first choice is to use integers if they are an option. However in many cases we need more than just integers, whether is fractions when we need numbers between integers, even (gasp) irrational numbers. In those cases, we switch to floating point numbers. We tend to treat floating point numbers as the most general of number, a real number. And this works most of the time ... until it doesn't. Let's look at why they don't always work, and examine some of the odd consequences.
 
 Floating point numbers are great:
 + allow us to represent a very large range values with great precision

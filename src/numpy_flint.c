@@ -228,7 +228,7 @@ static PyObject* pyflint_new(PyTypeObject* type,
 /// @return 0 on success, -1 on failure
 static int pyflint_init(PyObject* self, PyObject* args, PyObject* kwargs) {
     Py_ssize_t size = PyTuple_Size(args);
-    PyObject* F = {0};
+    PyObject* O = {0};
     flint* fp = &(((PyFlint*) self)->obval);
     double d;
     long long n;
@@ -240,21 +240,24 @@ static int pyflint_init(PyObject* self, PyObject* args, PyObject* kwargs) {
     }
 
     if (size == 1) {
-        // One argument of a PyFlint (copy constructor)
-        if (PyArg_ParseTuple(args, "O", &F), PyFlint_Check(F)) {
-            *fp = ((PyFlint*) F)->obval;
-            return 0;
-        }
-        // One argument of a floating type (standard constructor)
-        else if (PyArg_ParseTuple(args, "d", &d)) {
-            *fp = double_to_flint(d);
-            return 0;
-        }
-        // One argument of an integer type (standard constructor) 
-        else if (PyArg_ParseTuple(args, "L", &n)) {
-            d = (double) n;
-            *fp = double_to_flint(d);
-            return 0;
+        if (PyArg_ParseTuple(args, "O", &O)) {
+            // One argument of an integer type (standard constructor) 
+            if (PyLong_Check(O)) {
+                n = PyLong_AsLongLong(O);
+                *fp = int_to_flint(n);
+                return 0;
+            }
+            // One argument of a floating type (standard constructor)
+            else if (PyFloat_Check(O)) {
+                d = PyFloat_AsDouble(O);
+                *fp = double_to_flint(d);
+                return 0;
+            }
+            // One argument of a PyFlint (copy constructor)
+            else if (PyFlint_Check(O)) {
+                *fp = ((PyFlint*) O)->obval;
+                return 0;
+            }
         }
     }
 
