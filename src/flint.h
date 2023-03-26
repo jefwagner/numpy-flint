@@ -213,7 +213,7 @@ static NPY_INLINE void flint_inplace_add_scalar(flint* f, double s) {
 static NPY_INLINE flint flint_subtract(flint f1, flint f2) {
     flint _f = {
         nextafter(f1.a-f2.b, -INFINITY),
-        nextafter(f1.b-f1.a, INFINITY),
+        nextafter(f1.b-f2.a, INFINITY),
         f1.v-f2.v
     };
     return _f;
@@ -296,6 +296,39 @@ static NPY_INLINE void flint_inplace_divide_scalar(flint* f, double s) {
 // Don't righty know how copysign should work ...
 // static NPY_INLINE flint flint_copysign(flint f1, flint f2) {
 // }
+// Power uses the pow function, it's like mul except with a NaN check
+static NPY_INLINE flint flint_power(flint f1, flint f2) {
+    double aa = pow(f1.a, f2.a);
+    double ab = pow(f1.a, f2.b);
+    double ba = pow(f1.b, f2.a);
+    double bb = pow(f1.b, f2.b);
+    double v = pow(f1.v, f2.v);
+    flint ret = {0.0, 0.0, 0.0};
+    if (isnan(aa) || isnan(ab) || isnan(ba) || isnan(bb) || isnan(v)) {
+        v = sqrt(-1.0);
+        ret.a = v; ret.b = v; ret.v = v;
+    } else {
+        ret.a = nextafter(min4(aa,ab,ba,bb),-INFINITY);
+        ret.b = nextafter(max4(aa,ab,ba,bb),INFINITY);
+        ret.v = v;
+    }
+    return ret;
+}
+static NPY_INLINE void flint_inplace_power(flint* f1, flint f2) {
+    double aa = pow(f1->a, f2.a);
+    double ab = pow(f1->a, f2.b);
+    double ba = pow(f1->b, f2.a);
+    double bb = pow(f1->b, f2.b);
+    double v = pow(f1->v, f2.v);
+    if (isnan(aa) || isnan(ab) || isnan(ba) || isnan(bb) || isnan(v)) {
+        v = sqrt(-1.0);
+        f1->a = v; f1->b = v; f1->v = v;
+    } else {
+        f1->a = nextafter(min4(aa,ab,ba,bb),-INFINITY);
+        f1->b = nextafter(max4(aa,ab,ba,bb),INFINITY);
+        f1->v = v;
+    }
+}
 // Absolute value 'folds' the interval if it spans zero
 static NPY_INLINE flint flint_absolute(flint f) {
     flint _f = f;
@@ -353,18 +386,18 @@ static NPY_INLINE flint flint_exp(flint f){
     };
     return _f;
 }
-// Power function uses log, so has the same limit
-static NPY_INLINE flint flint_power(flint f, flint p) {
-    return flint_exp(flint_multiply(p, flint_log(f)));
-}
-static NPY_INLINE void flint_inplace_power(flint* f, flint p) {
-    flint _f = *f;
-    *f = flint_exp(flint_multiply(p, flint_log(_f)));
-    return;
-}
-static NPY_INLINE flint flint_power_scalar(flint f, double p) {
-    return flint_exp(flint_multiply(double_to_flint(p), flint_log(f)));
-}
+// // Power function uses log, so has the same limit
+// static NPY_INLINE flint flint_power(flint f, flint p) {
+//     return flint_exp(flint_multiply(p, flint_log(f)));
+// }
+// static NPY_INLINE void flint_inplace_power(flint* f, flint p) {
+//     flint _f = *f;
+//     *f = flint_exp(flint_multiply(p, flint_log(_f)));
+//     return;
+// }
+// static NPY_INLINE flint flint_power_scalar(flint f, double p) {
+//     return flint_exp(flint_multiply(double_to_flint(p), flint_log(f)));
+// }
 
 #ifdef __cplusplus
 }

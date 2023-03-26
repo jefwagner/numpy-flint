@@ -44,425 +44,346 @@ class TestInit(unittest.TestCase):
         self.assertEqual(x.v, y.v)
 
 
+class TestProperties(unittest.TestCase):
+    """Test for the properties of the flint objects"""
+
+    def test_eps(self):
+        """Validate the width of the interval"""
+        x = flint(1)
+        self.assertEqual(x.eps, 0)
+        x = flint(1.5)
+        e = np.nextafter(1.5,np.inf) - np.nextafter(1.5,-np.inf)
+        self.assertEqual(x.eps, e)
+
+    def test_get_interval(self):
+        """Validate getting the interval endpoints"""
+        x = flint(1.5)
+        a,b = x.interval
+        self.assertEqual(a, x.a)
+        self.assertEqual(b, x.b)
+
+    def test_get_interval(self):
+        """Validate setting the interval"""
+        x = flint(1.5)
+        x.interval = 1, 2
+        self.assertEqual(1, x.a)
+        self.assertEqual(2, x.b)
+        self.assertEqual(1.5, x.v)
+        x.interval = 1, 2, 1.75
+        self.assertEqual(1, x.a)
+        self.assertEqual(2, x.b)
+        self.assertEqual(1.75, x.v)
+
+
+class TestFloatSpecialValues(unittest.TestCase):
+    """Test the query functions for the float special value checks"""
+
+    def test_nonzero(self):
+        """Validate 0"""
+        x = flint(0)
+        self.assertFalse(np.nonzero(x))
+        x = flint(1)
+        self.assertTrue(np.nonzero(x))
+
+    def test_isnan(self):
+        """Validate NaN"""
+        x = flint(0)
+        self.assertFalse(np.isnan(x))
+        x.interval = np.nan,np.nan,np.nan
+        self.assertTrue(np.isnan(x))
+
+    def test_isfinite(self):
+        """Validate finite vs infinite"""
+        x = flint(0)
+        self.assertTrue(np.isfinite(x))
+        x.interval = 0, np.inf
+        self.assertFalse(np.isfinite(x))
+        x.interval = -np.inf, 0
+        self.assertFalse(np.isfinite(x))
+
+    def test_isinf(self):
+        """Validate finite vs infinite"""
+        x = flint(0)
+        self.assertFalse(np.isinf(x))
+        x.interval = 0, np.inf
+        self.assertTrue(np.isinf(x))
+        x.interval = -np.inf, 0
+        self.assertTrue(np.isinf(x))
+
+
 class TestComparisons(unittest.TestCase):
     """Test for comparisons"""
 
+    def validateEqual(self, lhs, rhs):
+        """Helper function for all comparison operators for equal values"""
+        self.assertFalse(lhs < rhs)
+        self.assertTrue(lhs <= rhs)
+        self.assertTrue(lhs == rhs)
+        self.assertTrue(lhs >= rhs)
+        self.assertFalse(lhs > rhs)
+        self.assertFalse(lhs != rhs)
+
+    def validateLess(self, lhs, rhs):
+        """Helper function for all comparison operators for lesser values"""
+        self.assertTrue(lhs < rhs)
+        self.assertTrue(lhs <= rhs)
+        self.assertFalse(lhs == rhs)
+        self.assertFalse(lhs >= rhs)
+        self.assertFalse(lhs > rhs)
+        self.assertTrue(lhs != rhs)
+
+    def validateGreater(self, lhs, rhs):
+        """Helper function for all comparison operators for greater values"""
+        self.assertFalse(lhs < rhs)
+        self.assertFalse(lhs <= rhs)
+        self.assertFalse(lhs == rhs)
+        self.assertTrue(lhs >= rhs)
+        self.assertTrue(lhs > rhs)
+        self.assertTrue(lhs != rhs)
+
+    def test_zerowidth(self):
+        """Validate comparisons with a zero-width flint with number"""
+        x = flint(2)
+        self.validateEqual(x, 2)
+        self.validateEqual(2, x)
+        self.validateEqual(x, 2.0)
+        self.validateEqual(2.0, x)
+        self.validateLess(x, 3)
+        self.validateGreater(3, x)
+        self.validateGreater(x, 1)
+        self.validateLess(1, x)
+
     def test_with_number(self):
-        """Validate comparisons with Numbers"""
-        pass
+        """Validate comparisons of a flint with a number"""
+        x = flint(2)
+        x.interval = 1, 2
+        self.validateLess(x, 3)
+        self.validateGreater(3, x)
+        self.validateEqual(x, 2)
+        self.validateEqual(2, x)
+        self.validateEqual(x, 1.5)
+        self.validateEqual(1.5, x)
+        self.validateEqual(x, 1)
+        self.validateEqual(1, x)
+        self.validateGreater(x, 0)
+        self.validateLess(0, x)
 
-# class TestComparisonZeroWidth(unittest.TestCase):
-#     """Test for comparisons with zero width flint objects"""
+    def test_with_flint(self):
+        """Validate comparisons between flints"""
+        x = flint(2)
+        x.interval = 1, 2
+        y = flint(0)
+        y.interval = 0, 0.5
+        self.validateLess(y, x)
+        self.validateGreater(x, y)
+        y.interval = 0.5, 1
+        self.validateEqual(y, x)
+        self.validateEqual(x, y)
+        y.interval = 0.75, 1.25
+        self.validateEqual(y, x)
+        self.validateEqual(x, y)
+        y.interval = 1.25, 1.75
+        self.validateEqual(y, x)
+        self.validateEqual(x, y)
+        
 
-#     def test_gt_float(self):
-#         """Validate greater than comparison with floats"""
-#         x = flint(1)
-#         y = 0
-#         self.assertFalse(x == y)
-#         self.assertTrue(x != y)
-#         self.assertTrue(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertFalse(x <= y)
-#         x = 1
-#         y = flint(0)
-#         self.assertFalse(x == y)
-#         self.assertTrue(x != y)
-#         self.assertTrue(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertFalse(x <= y)
+class TestArithmetic(unittest.TestCase):
+    """Test arithmetic operators for flint objects"""
 
-#     def test_gt_flint(self):
-#         """Validate greater than comparison between flint objects"""
-#         x = flint(1)
-#         y = flint(0)
-#         self.assertFalse(x == y)
-#         self.assertTrue(x != y)
-#         self.assertTrue(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertFalse(x <= y)
+    def test_pos(self):
+        """Test an explicit positive sign"""
+        x = flint(1)
+        y = +x
+        self.assertIsInstance(y, flint)
+        self.assertEqual(y.eps, x.eps)
+        self.assertEqual(y, 1)
+        x = flint(1.5)
+        y = +x
+        self.assertIsInstance(y, flint)
+        self.assertEqual(y.eps, x.eps)
+        self.assertEqual(y, 1.5)
 
-#     def test_eq_float(self):
-#         """Validate equal-to comparison with floats"""
-#         x = flint(1)
-#         y = 1
-#         self.assertTrue(x == y)
-#         self.assertFalse(x != y)
-#         self.assertFalse(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertTrue(x <= y)
-#         x = 1
-#         y = flint(1)
-#         self.assertTrue(x == y)
-#         self.assertFalse(x != y)
-#         self.assertFalse(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertTrue(x <= y)
+    def test_neg(self):
+        """Test negation"""
+        x = flint(1)
+        y = -x
+        self.assertIsInstance(y, flint)
+        self.assertEqual(y.eps, x.eps)
+        self.assertEqual(y, -1)
+        x = flint(1.5)
+        y = -x
+        self.assertIsInstance(y, flint)
+        self.assertEqual(y.eps, x.eps)
+        self.assertEqual(y, -1.5)
 
-#     def test_eq_flint(self):
-#         """Validate equal-to comparisons between flint objects"""
-#         x = flint(1)
-#         y = flint(1)
-#         self.assertTrue(x == y)
-#         self.assertFalse(x != y)
-#         self.assertFalse(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertTrue(x <= y)
+    def test_add(self):
+        """Validate addition"""
+        x = flint(1)
+        y = x + 1
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 2)
 
-#     def test_lt_float(self):
-#         """Validate less than comparison with floats"""
-#         x = flint(1)
-#         y = 2
-#         self.assertFalse(x == y)
-#         self.assertTrue(x != y)
-#         self.assertFalse(x > y)
-#         self.assertFalse(x >= y)
-#         self.assertTrue(x < y)
-#         self.assertTrue(x <= y)
-#         x = 1
-#         y = flint(2)
-#         self.assertFalse(x == y)
-#         self.assertTrue(x != y)
-#         self.assertFalse(x > y)
-#         self.assertFalse(x >= y)
-#         self.assertTrue(x < y)
-#         self.assertTrue(x <= y)
+    def test_iadd(self):
+        """Validate inplace addition"""
+        x = flint(1)
+        x += 1
+        self.assertIsInstance(x, flint)
+        self.assertTrue(x.eps > 0)
+        self.assertEqual(x, 2)
 
-#     def test_lt_flint(self):
-#         """Validate greater than comparison between flint objects"""
-#         x = flint(1)
-#         y = flint(2)
-#         self.assertFalse(x == y)
-#         self.assertTrue(x != y)
-#         self.assertFalse(x > y)
-#         self.assertFalse(x >= y)
-#         self.assertTrue(x < y)
-#         self.assertTrue(x <= y)
+    def test_sub(self):
+        """Validate subtraction"""
+        x = flint(2)
+        y = x - 1
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 1)
+        x = flint(1)
+        y = 2 - x
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 1)
 
+    def test_isub(self):
+        """Validate subtraction"""
+        x = flint(2)
+        x -= 1
+        self.assertIsInstance(x, flint)
+        self.assertTrue(x.eps > 0)
+        self.assertEqual(x, 1)
 
-# class TestComparisonNonzeroWidthFloat(unittest.TestCase):
-#     """Test for comparisons with non-zero width flint objects to floats"""
+    def test_mul(self):
+        """Validate multiplication"""
+        x = flint(2)
+        y = 3*x
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 6)
 
-#     def test_below(self):
-#         """Validate when float is completely below the interval"""
-#         x = flint.from_interval(1,2)
-#         y = 0.5
-#         self.assertFalse(x == y)
-#         self.assertTrue(x != y)
-#         self.assertTrue(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertFalse(x <= y)
+    def test_imul(self):
+        """Validate multiplication"""
+        x = flint(2)
+        x *= 3
+        self.assertIsInstance(x, flint)
+        self.assertTrue(x.eps > 0)
+        self.assertEqual(x, 6)
 
-#     def test_below_edge(self):
-#         """Validate when float is on lower edge of the interval"""
-#         x = flint.from_interval(1,2)
-#         y = 1
-#         self.assertTrue(x == y)
-#         self.assertFalse(x != y)
-#         self.assertFalse(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertTrue(x <= y)
+    def test_div(self):
+        """Validate division"""
+        x = flint(6)
+        y = x/3
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 2)
+        x = flint(2)
+        y = 6/x
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 3)
 
-#     def test_include(self):
-#         """Validate when the float in inside the interval"""
-#         x = flint.from_interval(1,2)
-#         y = 1.5
-#         self.assertTrue(x == y)
-#         self.assertFalse(x != y)
-#         self.assertFalse(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertTrue(x <= y)
+    def test_idiv(self):
+        """Validate division"""
+        x = flint(6)
+        x /= 3
+        self.assertIsInstance(x, flint)
+        self.assertTrue(x.eps > 0)
+        self.assertEqual(x, 2)
 
-#     def test_above_edge(self):
-#         """Validate when the float on upper edge of the interval"""
-#         x = flint.from_interval(1,2)
-#         y = 2
-#         self.assertTrue(x == y)
-#         self.assertFalse(x != y)
-#         self.assertFalse(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertTrue(x <= y)
+    def test_pow(self):
+        """Validate exponentiation"""
+        x = flint(4)
+        y = x**0.5
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 2)
 
-#     def test_above(self):
-#         """Validate when float is completely above the interval"""
-#         x = flint.from_interval(1,2)
-#         y = 2.5
-#         self.assertFalse(x == y)
-#         self.assertTrue(x != y)
-#         self.assertFalse(x > y)
-#         self.assertFalse(x >= y)
-#         self.assertTrue(x < y)
-#         self.assertTrue(x <= y)
+    def test_ipow(self):
+        """Validate exponentiation"""
+        x = flint(4)
+        x **= 0.5
+        self.assertIsInstance(x, flint)
+        self.assertTrue(x.eps > 0)
+        self.assertEqual(x, 2)
 
 
-# class TestComparisonNonzeroWidth(unittest.TestCase):
-#     """Test between two non-zero width flint objects"""
+class TestMath(unittest.TestCase):
+    """Test the math functions"""
 
-#     def test_below(self):
-#         """Validate comparison operators for lhs interval completely below the other"""
-#         x = flint.from_interval(1, 2)
-#         y = flint.from_interval(0, 0.5)
-#         self.assertFalse(x == y)
-#         self.assertTrue(x != y)
-#         self.assertTrue(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertFalse(x <= y)
+    def test_abs(self):
+        """Validate absolute value"""
+        x = flint(-2)
+        y = np.abs(x)
+        self.assertIsInstance(y, flint)
+        self.assertEqual(y.eps, x.eps)
+        self.assertEqual(y, 2)
+        x = flint(-1.5)
+        y = np.abs(x)
+        self.assertIsInstance(y, flint)
+        self.assertEqual(y.eps, x.eps)
+        self.assertEqual(y, 1.5)
+        x = flint(1.5)
+        y = np.abs(x)
+        self.assertIsInstance(y, flint)
+        self.assertEqual(y.eps, x.eps)
+        self.assertEqual(y, 1.5)
+        x = flint(0)
+        x.interval = -1,1
+        y = np.abs(x)
+        self.assertIsInstance(y, flint)
+        self.assertEqual(y.a, 0)
+        self.assertEqual(y.b, 1)
+        self.assertEqual(y.v, 0)
 
-#     def test_below_touch(self):
-#         """Validate comparison operators for lhs interval just touches the other from below"""
-#         x = flint.from_interval(1, 2)
-#         y = flint.from_interval(0, 1)
-#         self.assertTrue(x == y)
-#         self.assertFalse(x != y)
-#         self.assertFalse(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertTrue(x <= y) 
+    def test_sqrt(self):
+        """Validate the square root"""
+        x = flint(4)
+        y = np.sqrt(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 2)
+        x = flint(0)
+        x.interval = -1,3 # v = 1
+        y = np.sqrt(x)
+        self.assertIsInstance(y, flint)
+        self.assertEqual(y.a, 0)
+        self.assertEqual(y.v, 1)
+        x = flint(0)
+        x.interval = -3,1 # v = 1
+        y = np.sqrt(x)
+        self.assertIsInstance(y, flint)
+        self.assertEqual(y.a, 0)
+        self.assertEqual(y.v, 0)
+        x = flint(-4)
+        with self.assertWarns(RuntimeWarning):
+            y = np.sqrt(x)
+            self.assertIsInstance(y, flint)
+            self.assertTrue(np.isnan(y))
 
-#     def test_below_overlap(self):
-#         """Validate comparison operators for lhs interval below but overlapping the other"""
-#         x = flint.from_interval(1, 2)
-#         y = flint.from_interval(0.5, 1.5)
-#         self.assertTrue(x == y)
-#         self.assertFalse(x != y)
-#         self.assertFalse(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertTrue(x <= y) 
+    def test_exp(self):
+        """Validate the exponential function"""
+        x = flint(1)
+        y = np.exp(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, np.e)
 
-#     def test_internal(self):
-#         """Validate comparison operators when lhs interval is completely inside the other"""
-#         x = flint.from_interval(1, 2)
-#         y = flint.from_interval(1.3, 1.7)
-#         self.assertTrue(x == y)
-#         self.assertFalse(x != y)
-#         self.assertFalse(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertTrue(x <= y) 
+    def test_log(self):
+        """Validate the natural logarithm"""
+        x = flint(np.e)
+        y = np.log(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 1)
+        x = flint(0)
+        x.interval = -1,3 # midpoint of 1
+        y = np.log(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(np.isinf(y))
+        self.assertEqual(y.v, 0)
+        x = flint(-1)
+        with self.assertWarns(RuntimeWarning):
+            y = np.log(x)
+            self.assertIsInstance(y, flint)
+            self.assertTrue(np.isnan)
 
-#     def test_external(self):
-#         """Validate comparison operators when lhs interval completely contains the other"""
-#         x = flint.from_interval(1, 2)
-#         y = flint.from_interval(0.5, 2.5)
-#         self.assertTrue(x == y)
-#         self.assertFalse(x != y)
-#         self.assertFalse(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertTrue(x <= y) 
-
-#     def test_above_overlap(self):
-#         """Validate comparison operators for lhs interval above but overlapping the other"""
-#         x = flint.from_interval(1, 2)
-#         y = flint.from_interval(1.5, 2.5)
-#         self.assertTrue(x == y)
-#         self.assertFalse(x != y)
-#         self.assertFalse(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertTrue(x <= y) 
-
-#     def test_above_touch(self):
-#         """Validate comparison operators for lhs interval just touches the other from above"""
-#         x = flint.from_interval(1, 2)
-#         y = flint.from_interval(2, 3)
-#         self.assertTrue(x == y)
-#         self.assertFalse(x != y)
-#         self.assertFalse(x > y)
-#         self.assertTrue(x >= y)
-#         self.assertFalse(x < y)
-#         self.assertTrue(x <= y) 
-
-#     def test_above(self):
-#         """Validate comparison operators for lhs interval completely below the other"""
-#         x = flint.from_interval(1, 2)
-#         y = flint.from_interval(2.5, 3.5)
-#         self.assertFalse(x == y)
-#         self.assertTrue(x != y)
-#         self.assertFalse(x > y)
-#         self.assertFalse(x >= y)
-#         self.assertTrue(x < y)
-#         self.assertTrue(x <= y) 
-
-
-# class TestArithmetic(unittest.TestCase):
-#     """Test arithmetic operators for flint objects"""
-
-#     def test_add(self):
-#         """Validate addition"""
-#         x = flint(1)
-#         t = flint(2)
-#         t._grow()
-#         self.assertTrue(flint.identical(x+1, t))
-#         self.assertTrue(flint.identical(1+x, t))
-#         x += 1
-#         self.assertTrue(flint.identical(x, t))
-
-#     def test_sub(self):
-#         """Validate subtraction"""
-#         x = flint(2)
-#         y = flint(1)
-#         t = flint(1)
-#         t._grow()
-#         self.assertTrue(flint.identical(x-1, t))
-#         self.assertTrue(flint.identical(2-y, t))
-#         x -= 1
-#         self.assertTrue(flint.identical(x, t))
-
-#     def test_mul(self):
-#         """Validate multiplication"""
-#         x = flint(2)
-#         t = flint(6)
-#         t._grow()
-#         self.assertTrue(flint.identical(x*3, t))
-#         self.assertTrue(flint.identical(3*x, t))
-#         x *= 3
-#         self.assertTrue(flint.identical(x, t))
-
-#     def test_div(self):
-#         """Validate division"""
-#         x = flint(6)
-#         y = flint(3)
-#         t = flint(2)
-#         t._grow()
-#         self.assertTrue(flint.identical(x/3, t))
-#         self.assertTrue(flint.identical(6/y, t))
-#         x /= 3
-#         self.assertTrue(flint.identical(x, t))
-
-#     def test_frac(self):
-#         """Validate creation from a fraction"""
-#         x = flint.frac(1,3)
-#         y = flint(1)/3
-#         z = 1/flint(3)
-#         self.assertTrue(flint.identical(x, y))
-#         self.assertTrue(flint.identical(x, z))
-
-
-# class TestUnary(unittest.TestCase):
-#     """Test the unary operators"""
-
-#     def test_neg(self):
-#         """Validate negation"""
-#         x = flint(1)
-#         y = flint(-1)
-#         self.assertTrue(flint.identical(-x, y))
-#         self.assertTrue(flint.identical(x, -y))
-#         x = flint.from_interval(-0.5, 0.5)
-#         self.assertTrue(flint.identical(x, -x))
-#         x = flint.from_interval(-1, 2)
-#         y = flint.from_interval(-2, 1)
-#         self.assertTrue(flint.identical(-x, y))
-#         self.assertTrue(flint.identical(x, -y))
-#         x = flint.from_interval(1, 2)
-#         y = flint.from_interval(-2, -1)
-#         self.assertTrue(flint.identical(-x, y))
-#         self.assertTrue(flint.identical(x, -y))
-
-#     def test_pos(self):
-#         """Validate explicit positive sign"""
-#         x = flint(1)
-#         self.assertTrue(flint.identical(x, +x))
-#         x = flint(-1)
-#         self.assertTrue(flint.identical(x, +x))
-#         x = flint.from_interval(-1, 1)
-#         self.assertTrue(flint.identical(x, +x))
-#         x = flint.from_interval(1, 2)
-#         self.assertTrue(flint.identical(x, +x))
-#         x = flint.from_interval(-2, -1)
-#         self.assertTrue(flint.identical(x, +x))
-
-#     def test_abs(self):
-#         """Validate absolute value"""
-#         x = flint(-1)
-#         y = flint(1)
-#         t = flint(1)
-#         self.assertTrue(flint.identical(abs(x), t))
-#         self.assertTrue(flint.identical(abs(y), t))
-#         x = flint.from_interval(-1, 2)
-#         x = abs(x)
-#         self.assertEqual(x.a, 0)
-#         self.assertEqual(x.b, 2)
-#         self.assertEqual(x.v, 0.5)
-#         x = flint.from_interval(-2, 1)
-#         x = abs(x)
-#         self.assertEqual(x.a, 0)
-#         self.assertEqual(x.b, 2)
-#         self.assertEqual(x.v, 0.5)
-#         x = flint.from_interval(1, 2)
-#         t = flint(x)
-#         x = abs(x)
-#         self.assertTrue(flint.identical(x, t))
-#         x = flint.from_interval(-2, -1)
-#         t = flint.from_interval(1, 2)
-#         x = abs(x)
-#         self.assertTrue(flint.identical(x, t))
-
-#     def test_sqrt(self):
-#         """Validate square root"""
-#         x = flint(1)
-#         x.a = 1.0
-#         x.v = 4.0
-#         x.b = 9.0
-#         y = x.sqrt()
-#         self.assertEqual(y.a, np.nextafter(1.0, -np.inf))
-#         self.assertEqual(y.v, 2.0)
-#         self.assertEqual(y.b, np.nextafter(3.0, np.inf))
-#         x = flint(1)
-#         x.a = -1.0
-#         x.v = 1.0
-#         x.b = 4.0
-#         y = x.sqrt()
-#         self.assertEqual(y.a, 0.0)
-#         self.assertEqual(y.v, 1.0)
-#         self.assertEqual(y.b, np.nextafter(2.0, np.inf))
-#         x = flint(1)
-#         x.a = -1.0
-#         x.v = -1.0
-#         x.b = 1.0
-#         y = x.sqrt()
-#         self.assertEqual(y.a, 0.0)
-#         self.assertEqual(y.v, 0.0)
-#         self.assertEqual(y.b, np.nextafter(1.0, np.inf))
-#         x = flint(-1)
-#         with self.assertRaises(ValueError):
-#             x.sqrt()
-
-# class TestVectorizing(unittest.TestCase):
-#     """Test for vectorized creations of numpy arrays of flints"""
-
-#     def test_v_flint_0d(self):
-#         a = v_flint(1)
-#         self.assertNotIsInstance(a, np.ndarray)
-#         self.assertIsInstance(a, flint)
-#         self.assertTrue(flint.identical(a, flint(1)))
-
-#     def test_v_flint_1d(self):
-#         """Validate v_flint for 1-d sequences"""
-#         a = v_flint([i for i in range(3)])
-#         self.assertIsInstance(a, np.ndarray)
-#         self.assertEqual(a.shape, (3,))
-#         b = [flint(i) for i in range(3)]
-#         for i in range(len(a)):
-#             self.assertTrue(flint.identical(a[i], b[i]))
-
-#     def test_v_flint_2d(self):
-#         """Validate v_flint for 2-d arrays"""
-#         a = v_flint([[i+0.5*j for j in range(2)] for i in range(3)])
-#         self.assertIsInstance(a, np.ndarray)
-#         self.assertEqual(a.shape, (3,2))
-#         b = [[flint(i+0.5*j) for j in range(2)] for i in range(3)]
-#         for i in range(len(a)):
-#             for j in range(len(a[0])):
-#                 self.assertTrue(flint.identical(a[i,j],b[i][j]))

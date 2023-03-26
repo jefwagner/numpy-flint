@@ -630,7 +630,7 @@ static int pyflint_set_interval(PyObject* self, PyObject* value,
     if (PySequence_Size(value) == 2) {
         f->v = 0.5*(f->a+f->b);
     } else {
-        ob = PyNumber_Float(PySequence_GetItem(value, 1));
+        ob = PyNumber_Float(PySequence_GetItem(value, 2));
         if (ob == NULL) {
             PyErr_SetString(PyExc_ValueError, "Values must be numeric types");
         }
