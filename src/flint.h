@@ -74,11 +74,13 @@ typedef struct {
     double v;
 } flint;
 
-#define FLINT_ZERO (flint) {0.0, 0.0, 0.0}
-#define FLINT_ONE (flint) {1.0, 1.0, 1.0}
-#define FLINT_HALF (flint) {0.5, 0.5, 0.5}
-#define FLINT_TWO (flint) {2.0, 2.0, 2.0}
-
+#define FLINT_ZERO ((flint) {0.0, 0.0, 0.0})
+#define FLINT_ONE ((flint) {1.0, 1.0, 1.0})
+#define FLINT_HALF ((flint) {0.5, 0.5, 0.5})
+#define FLINT_TWO ((flint) {2.0, 2.0, 2.0})
+#define FLINT_2PI ((flint) {6.283185307179586, 6.283185307179587, 6.283185307179586})
+#define FLINT_PI ((flint) {3.141592653589793, 3.1415926535897936, 3.141592653589793})
+#define FLINT_PI_2 ((flint) {1.5707963267948966, 1.5707963267948968, 1.5707963267948966})
 //
 // Conversions
 //
@@ -293,9 +295,15 @@ static NPY_INLINE void flint_inplace_divide_scalar(flint* f, double s) {
 //
 // Math functions
 //
-// Don't righty know how copysign should work ...
-// static NPY_INLINE flint flint_copysign(flint f1, flint f2) {
-// }
+#define FLINT_MONOTONIC(fname) \
+static NPY_INLINE flint flint_##fname(flint f) { \
+    flint _f = { \
+        nextafter(nextafter(fname(f.a), -INFINITY), -INFINITY), \
+        nextafter(nextafter(fname(f.b), INFINITY), INFINITY), \
+        fname(f.v) \
+    }; \
+    return _f; \
+}
 // Power uses the pow function, it's like mul except with a NaN check
 static NPY_INLINE flint flint_power(flint f1, flint f2) {
     double aa = pow(f1.a, f2.a);
@@ -308,8 +316,8 @@ static NPY_INLINE flint flint_power(flint f1, flint f2) {
         v = sqrt(-1.0);
         ret.a = v; ret.b = v; ret.v = v;
     } else {
-        ret.a = nextafter(min4(aa,ab,ba,bb),-INFINITY);
-        ret.b = nextafter(max4(aa,ab,ba,bb),INFINITY);
+        ret.a = nextafter(nextafter(min4(aa,ab,ba,bb),-INFINITY),-INFINITY);
+        ret.b = nextafter(nextafter(max4(aa,ab,ba,bb),INFINITY),INFINITY);
         ret.v = v;
     }
     return ret;
@@ -324,8 +332,8 @@ static NPY_INLINE void flint_inplace_power(flint* f1, flint f2) {
         v = sqrt(-1.0);
         f1->a = v; f1->b = v; f1->v = v;
     } else {
-        f1->a = nextafter(min4(aa,ab,ba,bb),-INFINITY);
-        f1->b = nextafter(max4(aa,ab,ba,bb),INFINITY);
+        f1->a = nextafter(nextafter(min4(aa,ab,ba,bb),-INFINITY),-INFINITY);
+        f1->b = nextafter(nextafter(max4(aa,ab,ba,bb),INFINITY),INFINITY);
         f1->v = v;
     }
 }
@@ -360,44 +368,241 @@ static NPY_INLINE flint flint_sqrt(flint f) {
     }
     return _f;
 }
-// Log only gives NAN if whole interval is less than zero
-static NPY_INLINE flint flint_log(flint f) {
-    flint _f;
-    if (f.b < 0.0) {
-        double nan = sqrt(-1.0);
-        _f.a = nan; _f.b = nan; _f.v = nan;
-    } else if (f.a < 0.0) {
-        _f.a = -INFINITY;
-        _f.b = nextafter(log(f.b), INFINITY);
-        _f.v = (f.v > 0.0) ? log(f.v) : -INFINITY;
-    } else {
-        _f.a = nextafter(log(f.a), -INFINITY);
-        _f.b = nextafter(log(f.b), INFINITY);
-        _f.v = log(f.v);
-    }
-    return _f;
-}
-// Exponential function is a monotonic function with full range
-static NPY_INLINE flint flint_exp(flint f){
+// Cube root is a monotonic function with full range
+FLINT_MONOTONIC(cbrt)
+// Hypoteneus is a doubly monotonic function
+static NPY_INLINE flint flint_hypot(flint f1, flint f2) {
+    double aa = hypot(f1.a, f2.a);
+    double ab = hypot(f1.a, f2.b);
+    double ba = hypot(f1.b, f2.a);
+    double bb = hypot(f1.b, f2.b);
+    double a = min4(aa, ab, ba, bb);
+    double b = max4(aa, ab, ba, bb);
+    double v = hypot(f1.v, f2.v);
     flint _f = {
-        nextafter(exp(f.a), -INFINITY),
-        nextafter(exp(f.b), INFINITY),
-        exp(f.v)
+        nextafter(nextafter(a, -INFINITY), -INFINITY),
+        nextafter(nextafter(b, INFINITY), INFINITY),
+        v
     };
     return _f;
 }
-// // Power function uses log, so has the same limit
-// static NPY_INLINE flint flint_power(flint f, flint p) {
-//     return flint_exp(flint_multiply(p, flint_log(f)));
-// }
-// static NPY_INLINE void flint_inplace_power(flint* f, flint p) {
-//     flint _f = *f;
-//     *f = flint_exp(flint_multiply(p, flint_log(_f)));
-//     return;
-// }
-// static NPY_INLINE flint flint_power_scalar(flint f, double p) {
-//     return flint_exp(flint_multiply(double_to_flint(p), flint_log(f)));
-// }
+// Exponential function is a monotonic function with full range
+FLINT_MONOTONIC(exp)
+FLINT_MONOTONIC(exp2)
+FLINT_MONOTONIC(expm1)
+#define FLINT_LOGFUNC(log, min) \
+static NPY_INLINE flint flint_##log(flint f) { \
+    flint _f; \
+    if (f.b < min) { \
+        double nan = sqrt(-1.0); \
+        _f.a = nan; _f.b = nan; _f.v = nan; \
+    } else if (f.a < min) { \
+        _f.a = -INFINITY; \
+        _f.b = nextafter(log(f.b), INFINITY); \
+        _f.v = (f.v > min) ? log(f.v) : -INFINITY; \
+    } else { \
+        _f.a = nextafter(log(f.a), -INFINITY); \
+        _f.b = nextafter(log(f.b), INFINITY); \
+        _f.v = log(f.v); \
+    } \
+    return _f; \
+}
+FLINT_LOGFUNC(log, 0.0)
+FLINT_LOGFUNC(log10, 0.0)
+FLINT_LOGFUNC(log2, 0.0)
+FLINT_LOGFUNC(log1p, -1.0)
+// Error fuction is monotonic with full range
+FLINT_MONOTONIC(erf)
+static NPY_INLINE flint flint_erfc(flint f) {
+    flint _f = {
+        nextafter(nextafter(erfc(f.b), -INFINITY), -INFINITY),
+        nextafter(nextafter(erfc(f.a), INFINITY), INFINITY),
+        erfc(f.v)
+    };
+    return _f;
+}
+// FLINT_MONOTONIC(erfc) -> decresing, need some swapy-swap
+// Trig Functions
+static NPY_INLINE flint flint_sin(flint f) {
+    int n = (int) f.a/FLINT_2PI.a;
+    double da = f.a-n*FLINT_2PI.a;
+    double db = f.b-n*FLINT_2PI.a;
+    double sa = sin(f.a);
+    double sb = sin(f.b);
+    flint _f;
+    _f.a = nextafter(nextafter((sa<sb?sa:sb), -INFINITY), -INFINITY);
+    _f.b = nextafter(nextafter((sa>sb?sa:sb), INFINITY), INFINITY);
+    if (da <= FLINT_PI_2.a && db > FLINT_PI_2.a) {
+        _f.b = 1.0;
+    } else if (da <= 3*FLINT_PI_2.a) {
+        if (db > 3*FLINT_PI_2.a) {
+            _f.a = -1.0;
+        }
+        if (db > 5*FLINT_PI_2.a) {
+            _f.b = 1.0;
+        }
+    }
+    _f.v = sin(f.v);
+    return _f;
+}
+static NPY_INLINE flint flint_cos(flint f) {
+    int n = (int) f.a/FLINT_2PI.a;
+    double da = f.a-n*FLINT_2PI.a;
+    double db = f.b-n*FLINT_2PI.a;
+    double ca = cos(f.a);
+    double cb = cos(f.b);
+    flint _f;
+    _f.a = nextafter(nextafter((ca<cb?ca:cb), -INFINITY), -INFINITY);
+    _f.b = nextafter(nextafter((ca>cb?ca:cb), INFINITY), INFINITY);
+    if (da <= FLINT_PI.a && db > FLINT_PI.a) {
+        _f.a = -1.0;
+    } else {
+        if (db > FLINT_2PI.a) {
+            _f.b = 1.0;
+        }
+        if (db > 3*FLINT_PI.a) {
+            _f.a = -1.0;
+        }
+    }
+    _f.v = cos(f.v);
+    return _f;
+}
+static NPY_INLINE flint flint_tan(flint f) {
+    double ta = tan(f.a);
+    double tb = tan(f.b);
+    flint _f;
+    if (ta > tb || (f.b-f.a) > FLINT_PI.a) {
+        _f.a = -INFINITY;
+        _f.b = INFINITY;
+    } else {
+        _f.a = nextafter(nextafter(ta, -INFINITY), -INFINITY);
+        _f.b = nextafter(nextafter(tb, INFINITY), INFINITY);
+    }
+    _f.v = tan(f.v);
+    return _f;
+}
+// Inverse trig functions
+static NPY_INLINE flint flint_asin(flint f) {
+    flint _f;
+    if (f.b < -1.0 || f.a > 1.0) {
+        double nan = sqrt(-1.0);
+        _f.a = nan; _f.b = nan; _f.v = nan;
+    } else {
+        if (f.a < -1.0) {
+            _f.a = -FLINT_PI_2.b;
+        } else {
+            _f.a = nextafter(nextafter(asin(f.a), -INFINITY), -INFINITY);
+        }
+        if (f.b > 1.0) {
+            _f.b = FLINT_PI_2.b;
+        } else {
+            _f.b = nextafter(nextafter(asin(f.b), INFINITY), INFINITY);
+        }
+        if (f.v < -1.0) {
+            _f.v = -FLINT_PI_2.v;
+        } else if (f.v > 1.0) {
+            _f.v = FLINT_PI_2.v;
+        } else {
+            _f.v = asin(f.v);
+        }
+    }
+    return _f;
+}
+static NPY_INLINE flint flint_acos(flint f) {
+    flint _f;
+    if (f.b < -1.0 || f.a > 1.0) {
+        double nan = sqrt(-1.0);
+        _f.a = nan; _f.b = nan; _f.v = nan;
+    } else {
+        if (f.a < -1.0) {
+            _f.b = FLINT_PI.b;
+        } else {
+            _f.b = nextafter(nextafter(acos(f.a), INFINITY), INFINITY);
+        }
+        if (f.b > 1.0) {
+            _f.a = 0.0;
+        } else {
+            _f.a = nextafter(nextafter(acos(f.b), -INFINITY), -INFINITY);
+        }
+        if (f.v < -1.0) {
+            _f.v = FLINT_PI.v;
+        } else if (f.v > 1.0) {
+            _f.v = 0;
+        } else {
+            _f.v = acos(f.v);
+        }
+    }
+    return _f;
+}
+FLINT_MONOTONIC(atan)
+// atan2
+// Hyperbolic trig functions
+FLINT_MONOTONIC(sinh)
+static NPY_INLINE flint flint_cosh(flint f) {
+    flint _f;
+    if (f.a > 0.0) {
+        _f.a = cosh(f.a);
+        _f.b = cosh(f.b);
+    }
+    if (f.b < 0.0) { // interval is all negative - so invert
+        _f.a = cosh(f.b);
+        _f.b = cosh(f.a);
+    } else if (f.a < 0) { // interval spans 0
+        _f.a = 1.0; // 1 is the new lower bound
+        _f.b = ((-f.a > f.b)? cosh(f.a) : cosh(f.b)); // upper bound is the greater
+    }
+    _f.a = nextafter(nextafter(_f.a, -INFINITY), -INFINITY);
+    _f.b = nextafter(nextafter(_f.b, INFINITY), INFINITY);
+    _f.v = cosh(f.v);
+    return _f;
+}
+FLINT_MONOTONIC(tanh)
+// Inverse hyperbolic trig
+FLINT_MONOTONIC(asinh)
+static NPY_INLINE flint flint_acosh(flint f) {
+    flint _f;
+    if (f.b < 1.0) {
+        double nan = sqrt(-1.0);
+        _f.a = nan; _f.b = nan; _f.v = nan;
+    } else if (f.a < 1.0) {
+        _f.a = 0.0;
+        _f.b = nextafter(nextafter(acosh(f.b), INFINITY), INFINITY);
+        _f.v = (f.v > 1.0) ? acosh(f.v) : 0.0;
+    } else {
+        _f.a = nextafter(nextafter(acosh(f.a), -INFINITY), -INFINITY);
+        _f.b = nextafter(nextafter(acosh(f.b), INFINITY), INFINITY);
+        _f.v = acosh(f.v);
+    }
+    return _f;
+}
+// atanh
+static NPY_INLINE flint flint_atanh(flint f) {
+    flint _f;
+    if (f.b < -1.0 || f.a > 1.0) {
+        double nan = sqrt(-1.0);
+        _f.a = nan; _f.b = nan; _f.v = nan;
+    } else {
+        if (f.a < -1.0) {
+            _f.a = -INFINITY;
+        } else {
+            _f.a = nextafter(nextafter(atanh(f.a), -INFINITY), -INFINITY);
+        }
+        if (f.b > 1.0) {
+            _f.b = INFINITY;
+        } else {
+            _f.b = nextafter(nextafter(atanh(f.b), INFINITY), INFINITY);
+        }
+        if (f.v < -1.0) {
+            _f.v = -INFINITY;
+        } else if (f.v > 1.0) {
+            _f.v = INFINITY;
+        } else {
+            _f.v = atanh(f.v);
+        }
+    }
+    return _f;
+} 
+
 
 #ifdef __cplusplus
 }
