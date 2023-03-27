@@ -410,6 +410,7 @@ UNARY_FLINT_RETURNER(negative)
 /// @param a The PyFlint interval value
 /// @return The absolute value of the interval
 UNARY_FLINT_RETURNER(absolute)
+UNARY_TO_SELF_METHOD(absolute)
 /// @brief The _add_ and _radd_ addition method for intervals
 /// @param a The first number/flint
 /// @param b The second number/flint
@@ -521,16 +522,106 @@ UNARY_TO_SELF_METHOD(isfinite)
 /// @return The square root of the interval if a >= 0 else NaN
 UNARY_FLINT_RETURNER(sqrt)
 UNARY_TO_SELF_METHOD(sqrt)
-/// @brief Evaluate the natural log of the interval
+/// @brief Evaluate the cube root of the interval
 /// @param a The PyFlint object
-/// @return The log of the interval if a >= 0 else NaN
-UNARY_FLINT_RETURNER(log)
-UNARY_TO_SELF_METHOD(log)
+/// @return The cube root of the interval
+UNARY_FLINT_RETURNER(cbrt)
+UNARY_TO_SELF_METHOD(cbrt)
 /// @brief Evaluate the exponential of the interval
 /// @param a The PyFlint object
 /// @return The exponential of the interval
 UNARY_FLINT_RETURNER(exp)
 UNARY_TO_SELF_METHOD(exp)
+/// @brief Evaluate the exponential base 2 (2^a) of the interval
+/// @param a The PyFlint object
+/// @return The exponential base 2 of the interval
+UNARY_FLINT_RETURNER(exp2)
+UNARY_TO_SELF_METHOD(exp2)
+/// @brief Evaluate the exponential function minus 1 (e^a -1) of the interval
+/// @param a The PyFlint object
+/// @return The exponential minus 1 of the interval
+UNARY_FLINT_RETURNER(expm1)
+UNARY_TO_SELF_METHOD(expm1)
+/// @brief Evaluate the natural log of the interval
+/// @param a The PyFlint object
+/// @return The log of the interval if a >= 0 else NaN
+UNARY_FLINT_RETURNER(log)
+UNARY_TO_SELF_METHOD(log)
+/// @brief Evaluate the log base 10 of the interval
+/// @param a The PyFlint object
+/// @return The log base 10 of the interval if a >= 0 else NaN
+UNARY_FLINT_RETURNER(log10)
+UNARY_TO_SELF_METHOD(log10)
+/// @brief Evaluate the log base 2 of the interval
+/// @param a The PyFlint object
+/// @return The log base 2 of the interval if a >= 0 else NaN
+UNARY_FLINT_RETURNER(log2)
+UNARY_TO_SELF_METHOD(log2)
+/// @brief Evaluate the natural log of 1 plus the argument ln(1+a) of the interval
+/// @param a The PyFlint object
+/// @return The natural log of 1+a of the interval if a >= -1 else NaN
+UNARY_FLINT_RETURNER(log1p)
+UNARY_TO_SELF_METHOD(log1p)
+/// @brief Evaluate the sine of the interval
+/// @param a The PyFlint object
+/// @return The sine of the interval
+UNARY_FLINT_RETURNER(sin)
+UNARY_TO_SELF_METHOD(sin)
+/// @brief Evaluate the cosine of the interval
+/// @param a The PyFlint object
+/// @return The cosine of the interval
+UNARY_FLINT_RETURNER(cos)
+UNARY_TO_SELF_METHOD(cos)
+/// @brief Evaluate the tangent of the interval
+/// @param a The PyFlint object
+/// @return The tangent of the interval
+UNARY_FLINT_RETURNER(tan)
+UNARY_TO_SELF_METHOD(tan)
+/// @brief Evaluate the inverse sine of the interval
+/// @param a The PyFlint object
+/// @return The inverse sine of the interval
+UNARY_FLINT_RETURNER(asin)
+UNARY_TO_SELF_METHOD(asin)
+/// @brief Evaluate the inverse cosine of the interval
+/// @param a The PyFlint object
+/// @return The inverse cosine of the interval
+UNARY_FLINT_RETURNER(acos)
+UNARY_TO_SELF_METHOD(acos)
+/// @brief Evaluate the inverse tangent of the interval
+/// @param a The PyFlint object
+/// @return The inverse tangent of the interval
+UNARY_FLINT_RETURNER(atan)
+UNARY_TO_SELF_METHOD(atan)
+/// @brief Evaluate the hyperbolic sine of the interval
+/// @param a The PyFlint object
+/// @return The hyperbolic sine of the interval
+UNARY_FLINT_RETURNER(sinh)
+UNARY_TO_SELF_METHOD(sinh)
+/// @brief Evaluate the hyperbolic cosine of the interval
+/// @param a The PyFlint object
+/// @return The hyperbolic cosine of the interval
+UNARY_FLINT_RETURNER(cosh)
+UNARY_TO_SELF_METHOD(cosh)
+/// @brief Evaluate the hyperbolic tangent of the interval
+/// @param a The PyFlint object
+/// @return The hyperbolic tangent of the interval
+UNARY_FLINT_RETURNER(tanh)
+UNARY_TO_SELF_METHOD(tanh)
+/// @brief Evaluate the inverse hyperbolic sine of the interval
+/// @param a The PyFlint object
+/// @return The inverse hyperbolic sine of the interval
+UNARY_FLINT_RETURNER(asinh)
+UNARY_TO_SELF_METHOD(asinh)
+/// @brief Evaluate the inverse hyperbolic cosine of the interval
+/// @param a The PyFlint object
+/// @return The inverse hyperbolic cosine of the interval
+UNARY_FLINT_RETURNER(acosh)
+UNARY_TO_SELF_METHOD(acosh)
+/// @brief Evaluate the inverse hyperbolic tangent of the interval
+/// @param a The PyFlint object
+/// @return The inverse hyperbolic tangent of the interval
+UNARY_FLINT_RETURNER(atanh)
+UNARY_TO_SELF_METHOD(atanh)
 
 
 // ---------------------------------------
@@ -556,12 +647,50 @@ PyMethodDef pyflint_methods[] = {
     {"isfinite", pyflint_isfinite_meth, METH_NOARGS,
     "True if the interval has covers a finite range"},
     // Math functions
+    {"abs", pyflint_absolute_meth, METH_NOARGS,
+    "Evaluate the absolute value of the interval"},
     {"sqrt", pyflint_sqrt_meth, METH_NOARGS,
     "Evaluate the square root of the interval"},
-    {"log", pyflint_log_meth, METH_NOARGS,
-    "Evaluate the natural log of the interval"},
+    {"cbrt", pyflint_cbrt_meth, METH_NOARGS,
+    "Evaluate the cube root of the interval"},
     {"exp", pyflint_exp_meth, METH_NOARGS,
     "Evaluate the exponential func of an interval"},
+    {"exp2", pyflint_exp2_meth, METH_NOARGS,
+    "Evaluate the exponential base 2 of an interval"},
+    {"expm1", pyflint_expm1_meth, METH_NOARGS,
+    "Evaluate the exponential minus 1 of an interval"},
+    {"log", pyflint_log_meth, METH_NOARGS,
+    "Evaluate the natural log of the interval"},
+    {"log10", pyflint_log10_meth, METH_NOARGS,
+    "Evaluate the log base 10 of the interval"},
+    {"log2", pyflint_log2_meth, METH_NOARGS,
+    "Evaluate the log base 2 of the interval"},
+    {"log1p", pyflint_log1p_meth, METH_NOARGS,
+    "Evaluate the natural log of one plus the interval"},
+    {"sin", pyflint_sin_meth, METH_NOARGS,
+    "Evaluate the sine of the interval"},
+    {"cos", pyflint_cos_meth, METH_NOARGS,
+    "Evaluate the cosine of the interval"},
+    {"tan", pyflint_tan_meth, METH_NOARGS,
+    "Evaluate the tangent of the interval"},
+    {"arcsin", pyflint_asin_meth, METH_NOARGS,
+    "Evaluate the inverse sine of the interval"},
+    {"arccos", pyflint_acos_meth, METH_NOARGS,
+    "Evaluate the inverse cosine of the interval"},
+    {"arctan", pyflint_atan_meth, METH_NOARGS,
+    "Evaluate the inverse tangent of the interval"},
+    {"sinh", pyflint_sinh_meth, METH_NOARGS,
+    "Evaluate the hyperbolic sine of the interval"},
+    {"cosh", pyflint_cosh_meth, METH_NOARGS,
+    "Evaluate the hyperbolic cosine of the interval"},
+    {"tanh", pyflint_tanh_meth, METH_NOARGS,
+    "Evaluate the hyperbolic tangent of the interval"},
+    {"arcsinh", pyflint_asinh_meth, METH_NOARGS,
+    "Evaluate the inverse hyperbolic sine of the interval"},
+    {"arccosh", pyflint_acosh_meth, METH_NOARGS,
+    "Evaluate the inverse hyperbolic cosine of the interval"},
+    {"arctanh", pyflint_atanh_meth, METH_NOARGS,
+    "Evaluate the inverse hyperbolic tangent of the interval"},
     // sentinel
     {NULL, NULL, 0, NULL}
 };
@@ -1122,8 +1251,26 @@ NPYFLINT_UNARY_UFUNC(isinf, npy_bool)
 NPYFLINT_UNARY_UFUNC(isfinite, npy_bool)
 NPYFLINT_UNARY_UFUNC(absolute, flint)
 NPYFLINT_UNARY_UFUNC(sqrt, flint)
+NPYFLINT_UNARY_UFUNC(cbrt, flint)
 NPYFLINT_UNARY_UFUNC(exp, flint)
+NPYFLINT_UNARY_UFUNC(exp2, flint)
+NPYFLINT_UNARY_UFUNC(expm1, flint)
 NPYFLINT_UNARY_UFUNC(log, flint)
+NPYFLINT_UNARY_UFUNC(log10, flint)
+NPYFLINT_UNARY_UFUNC(log2, flint)
+NPYFLINT_UNARY_UFUNC(log1p, flint)
+NPYFLINT_UNARY_UFUNC(sin, flint)
+NPYFLINT_UNARY_UFUNC(cos, flint)
+NPYFLINT_UNARY_UFUNC(tan, flint)
+NPYFLINT_UNARY_UFUNC(asin, flint)
+NPYFLINT_UNARY_UFUNC(acos, flint)
+NPYFLINT_UNARY_UFUNC(atan, flint)
+NPYFLINT_UNARY_UFUNC(sinh, flint)
+NPYFLINT_UNARY_UFUNC(cosh, flint)
+NPYFLINT_UNARY_UFUNC(tanh, flint)
+NPYFLINT_UNARY_UFUNC(asinh, flint)
+NPYFLINT_UNARY_UFUNC(acosh, flint)
+NPYFLINT_UNARY_UFUNC(atanh, flint)
 
 /// @brief utility type to find alignment for the flint object
 typedef struct {uint8_t c; flint f; } align_test;
@@ -1318,8 +1465,26 @@ PyMODINIT_FUNC PyInit_numpy_flint(void) {
     REGISTER_UFUNC(negative, negative)
     REGISTER_UFUNC(positive, positive)
     REGISTER_UFUNC(sqrt, sqrt)
+    REGISTER_UFUNC(cbrt, cbrt)
     REGISTER_UFUNC(exp, exp)
+    REGISTER_UFUNC(exp2, exp2)
+    REGISTER_UFUNC(expm1, expm1)
     REGISTER_UFUNC(log, log)
+    REGISTER_UFUNC(log10, log10)
+    REGISTER_UFUNC(log2, log2)
+    REGISTER_UFUNC(log1p, log1p)
+    REGISTER_UFUNC(sin, sin)
+    REGISTER_UFUNC(cos, cos)
+    REGISTER_UFUNC(tan, tan)
+    REGISTER_UFUNC(arcsin, asin)
+    REGISTER_UFUNC(arccos, acos)
+    REGISTER_UFUNC(arctan, atan)
+    REGISTER_UFUNC(sinh, sinh)
+    REGISTER_UFUNC(cosh, cosh)
+    REGISTER_UFUNC(tanh, tanh)
+    REGISTER_UFUNC(arcsinh, asinh)
+    REGISTER_UFUNC(arccosh, acosh)
+    REGISTER_UFUNC(arctanh, atanh)
     // flint, flint -> bool
     arg_types[0] = NPY_FLINT;
     arg_types[1] = NPY_FLINT;
