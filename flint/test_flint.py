@@ -307,8 +307,8 @@ class TestArithmetic(unittest.TestCase):
         self.assertEqual(x, 2)
 
 
-class TestMath(unittest.TestCase):
-    """Test the math functions"""
+class TestGeneralMath(unittest.TestCase):
+    """Test the general math functions"""
 
     def test_abs(self):
         """Validate absolute value"""
@@ -359,6 +359,15 @@ class TestMath(unittest.TestCase):
             y = np.sqrt(x)
             self.assertIsInstance(y, flint)
             self.assertTrue(np.isnan(y))
+
+    def test_cbrt(self):
+        """Validate the cube root"""
+        x = flint(8)
+        y = np.cbrt(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 2)
+
 
     def test_exp(self):
         """Validate the exponential function"""
