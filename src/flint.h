@@ -463,6 +463,9 @@ static NPY_INLINE flint flint_cos(flint f) {
     _f.b = nextafter(nextafter((ca>cb?ca:cb), INFINITY), INFINITY);
     if (da <= FLINT_PI.a && db > FLINT_PI.a) {
         _f.a = -1.0;
+        if (db > FLINT_2PI.a) {
+            _f.b = 1.0;
+        }
     } else {
         if (db > FLINT_2PI.a) {
             _f.b = 1.0;
