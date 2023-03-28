@@ -369,6 +369,9 @@ class TestGeneralMath(unittest.TestCase):
         self.assertEqual(y, 2)
 
 
+class TestExponentialMath(unittest.TestCase):
+    """Test the exponential and log based math functions"""
+
     def test_exp(self):
         """Validate the exponential function"""
         x = flint(1)
@@ -376,6 +379,22 @@ class TestGeneralMath(unittest.TestCase):
         self.assertIsInstance(y, flint)
         self.assertTrue(y.eps > 0)
         self.assertEqual(y, np.e)
+
+    def test_exp2(self):
+        """Validate the 2^x function"""
+        x = flint(0.5)
+        y = np.exp2(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, np.sqrt(2))
+
+    def test_expm1(self):
+        """Validate the e^x-1 function"""
+        x = flint(1.0e-15)
+        y = np.expm1(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 1.0e-15)
 
     def test_log(self):
         """Validate the natural logarithm"""
@@ -395,4 +414,62 @@ class TestGeneralMath(unittest.TestCase):
             y = np.log(x)
             self.assertIsInstance(y, flint)
             self.assertTrue(np.isnan)
+
+    def test_log10(self):
+        """Validate the log base 10"""
+        x = flint(1.0e7)
+        y = np.log10(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 7)
+        x = flint(0)
+        x.interval = -1,3 # midpoint of 1
+        y = np.log10(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(np.isinf(y))
+        self.assertEqual(y.v, 0)
+        x = flint(-1)
+        with self.assertWarns(RuntimeWarning):
+            y = np.log10(x)
+            self.assertIsInstance(y, flint)
+            self.assertTrue(np.isnan)
+
+    def test_log2(self):
+        """Validate the log base 2"""
+        x = flint(256)
+        y = np.log2(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 8)
+        x = flint(0)
+        x.interval = -1,3 # midpoint of 1
+        y = np.log2(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(np.isinf(y))
+        self.assertEqual(y.v, 0)
+        x = flint(-1)
+        with self.assertWarns(RuntimeWarning):
+            y = np.log2(x)
+            self.assertIsInstance(y, flint)
+            self.assertTrue(np.isnan)
+
+    def test_log1p(self):
+        """Validate the log(1+x)"""
+        x = flint(1.0e-15)
+        y = np.log1p(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 1.0e-15)
+        x = flint(0)
+        x.interval = -2,2 # midpoint of 0
+        y = np.log1p(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(np.isinf(y))
+        self.assertEqual(y.v, 0)
+        x = flint(-2)
+        with self.assertWarns(RuntimeWarning):
+            y = np.log1p(x)
+            self.assertIsInstance(y, flint)
+            self.assertTrue(np.isnan)
+
 
