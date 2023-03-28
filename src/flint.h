@@ -441,6 +441,13 @@ static NPY_INLINE flint flint_sin(flint f) {
         if (db > 5*FLINT_PI_2.a) {
             _f.b = 1.0;
         }
+    } else {
+        if (db > 5*FLINT_PI_2.a) {
+            _f.b = 1.0;
+        }
+        if (db > 7*FLINT_PI_2.a) {
+            _f.a = -1.0;
+        }
     }
     _f.v = sin(f.v);
     return _f;
