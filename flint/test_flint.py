@@ -473,3 +473,94 @@ class TestExponentialMath(unittest.TestCase):
             self.assertTrue(np.isnan)
 
 
+class TestTrigMath(unittest.TestCase):
+    """Test trig and inverse trig math functions"""
+
+    def test_sin(self):
+        """Validate sin"""
+        # Check if sin(pi) = 0
+        x = flint(np.pi)
+        y = np.sin(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 0)
+        # Make sure invariant for a and b is held true
+        x = flint(0.5)
+        y = np.sin(x)
+        self.assertTrue(y.b > y.a)
+        x = flint(3.5)
+        y = np.sin(x)
+        self.assertTrue(y.b > y.a)
+        # Check when not monotonic
+        x = flint(0)
+        x.interval = 1,2 # covers pi/2
+        y = np.sin(x)
+        self.assertEqual(y.b, 1.0)
+        self.assertAlmostEqual(y.a, np.sin(1.0))
+        x.interval = 4,5 # covers 3 pi/2
+        y = np.sin(x)
+        self.assertEqual(y.a, -1.0)
+        self.assertAlmostEqual(y.b, np.sin(4.0))
+        x.interval = 6,8 # covers 5 pi/2
+        y = np.sin(x)
+        self.assertEqual(y.b, 1.0)
+        self.assertAlmostEqual(y.a, np.sin(6.0))
+        x.interval = 4,8 # covers 3 pi/2 and 5 pi/2
+        y = np.sin(x)
+        self.assertEqual(y.a, -1.0)
+        self.assertEqual(y.b, 1.0)
+        x.interval = 6,11 # covers 5 pi/2 and 7 pi/2
+        y = np.sin(x)
+        self.assertEqual(y.a, -1.0)
+        self.assertEqual(y.b, 1.0)
+
+    def test_cos(self):
+        """Validate cos"""
+        # Check if cos(pi/2) = 0
+        x = flint(np.pi/2)
+        y = np.cos(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 0)
+        # Check invariant for a and b held true
+        x = flint(1.5)
+        y = np.cos(x)
+        self.assertTrue(y.a < y.b)
+        x = flint(4.5)
+        y = np.cos(x)
+        self.assertTrue(y.a < y.b)
+        # Check for extreme values
+        x = flint(0)
+        x.interval = -0.5, 1 # over zero
+        y = np.cos(x)
+        self.assertEqual(y.b, 1.0)
+        self.assertAlmostEqual(y.a, np.cos(1))
+        x = flint(0)
+        x.interval = 3, 4 # over pi
+        y = np.cos(x)
+        self.assertEqual(y.a, -1.0)
+        self.assertAlmostEqual(y.b, np.cos(4))
+        x = flint(0)
+        x.interval = 3, 7 # over pi and 2pi
+        y = np.cos(x)
+        self.assertEqual(y.a, -1.0)
+        self.assertEqual(y.b, 1.0)
+        x.interval = 6, 10 # over 2pi and 3pi
+        y = np.cos(x)
+        self.assertEqual(y.a, -1.0)
+        self.assertEqual(y.b, 1.0)
+
+    def test_tan(self):
+        """Validate tangent"""
+        x = flint(np.pi/4)
+        y = np.tan(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 1)
+        x = flint(0)
+        x.interval = 1.5,1.6
+        y = np.tan(x)
+        self.assertTrue(np.isinf(y.a))
+        self.assertTrue(np.isinf(y.b))
+        x.interval = -0.5, np.pi
+    
