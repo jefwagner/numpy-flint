@@ -549,20 +549,15 @@ FLINT_MONOTONIC(atan)
 // Hyperbolic trig functions
 FLINT_MONOTONIC(sinh)
 static NPY_INLINE flint flint_cosh(flint f) {
+    double a = cosh(f.a);
+    double b = cosh(f.b);
     flint _f;
-    if (f.a > 0.0) {
-        _f.a = cosh(f.a);
-        _f.b = cosh(f.b);
-    }
-    if (f.b < 0.0) { // interval is all negative - so invert
-        _f.a = cosh(f.b);
-        _f.b = cosh(f.a);
-    } else if (f.a < 0) { // interval spans 0
+    if (f.a > 0.0 || f.b < 0) {
+        _f.a = nextafter(nextafter(a<b?a:b, -INFINITY), -INFINITY);
+    } else { // interval spans 0
         _f.a = 1.0; // 1 is the new lower bound
-        _f.b = ((-f.a > f.b)? cosh(f.a) : cosh(f.b)); // upper bound is the greater
     }
-    _f.a = nextafter(nextafter(_f.a, -INFINITY), -INFINITY);
-    _f.b = nextafter(nextafter(_f.b, INFINITY), INFINITY);
+    _f.b = nextafter(nextafter(a>b?a:b, INFINITY), INFINITY);
     _f.v = cosh(f.v);
     return _f;
 }
