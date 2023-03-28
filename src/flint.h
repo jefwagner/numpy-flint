@@ -424,7 +424,7 @@ static NPY_INLINE flint flint_erfc(flint f) {
 // FLINT_MONOTONIC(erfc) -> decresing, need some swapy-swap
 // Trig Functions
 static NPY_INLINE flint flint_sin(flint f) {
-    int n = (int) f.a/FLINT_2PI.a;
+    int n = (int) floor(f.a/FLINT_2PI.a);
     double da = f.a-n*FLINT_2PI.a;
     double db = f.b-n*FLINT_2PI.a;
     double sa = sin(f.a);
@@ -453,7 +453,7 @@ static NPY_INLINE flint flint_sin(flint f) {
     return _f;
 }
 static NPY_INLINE flint flint_cos(flint f) {
-    int n = (int) f.a/FLINT_2PI.a;
+    int n = (int) floor(f.a/FLINT_2PI.a);
     double da = f.a-n*FLINT_2PI.a;
     double db = f.b-n*FLINT_2PI.a;
     double ca = cos(f.a);
