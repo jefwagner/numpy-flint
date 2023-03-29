@@ -474,7 +474,7 @@ class TestExponentialMath(unittest.TestCase):
 
 
 class TestTrigMath(unittest.TestCase):
-    """Test trig and inverse trig math functions"""
+    """Test trig functions"""
 
     def test_sin(self):
         """Validate sin"""
@@ -563,4 +563,229 @@ class TestTrigMath(unittest.TestCase):
         self.assertTrue(np.isinf(y.a))
         self.assertTrue(np.isinf(y.b))
         x.interval = -0.5, np.pi
+        y = np.tan(x)
+        self.assertTrue(np.isinf(y.a))
+        self.assertTrue(np.isinf(y.b))
     
+
+class TestInverseTrigMath(unittest.TestCase):
+    """Test inverse trig functions"""
+
+    def test_asin(self):
+        """Validate the inverse sin"""
+        x = flint(0.5)
+        y = np.arcsin(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, np.pi/6)
+        x = flint(0)
+        x.interval = -1.2, -0.9
+        y = np.arcsin(x)
+        self.assertEqual(y, -np.pi/2)
+        self.assertAlmostEqual(y.a, -np.pi/2)
+        self.assertAlmostEqual(y.v, -np.pi/2)
+        self.assertAlmostEqual(y.b, np.arcsin(-0.9))
+        x = flint(0)
+        x.interval = 0.8, 1.1
+        y = np.arcsin(x)
+        self.assertEqual(y, np.pi/2)
+        self.assertAlmostEqual(y.a, np.arcsin(0.8))
+        self.assertAlmostEqual(y.v, np.arcsin(0.95))
+        self.assertAlmostEqual(y.b, np.pi/2)
+        x = flint(0)
+        x.interval = -1.1, 1.1
+        y = np.arcsin(x)
+        self.assertAlmostEqual(y.a, -np.pi/2)
+        self.assertEqual(y.v, 0)
+        self.assertAlmostEqual(y.b, np.pi/2)
+        x = flint(1.1)
+        with self.assertWarns(RuntimeWarning):
+            y = np.arcsin(x)
+            self.assertTrue(np.isnan(y.a))
+            self.assertTrue(np.isnan(y.b))
+            self.assertTrue(np.isnan(y.v))
+        x = flint(-1.1)
+        with self.assertWarns(RuntimeWarning):
+            y = np.arcsin(x)
+            self.assertTrue(np.isnan(y.a))
+            self.assertTrue(np.isnan(y.b))
+            self.assertTrue(np.isnan(y.v))
+
+    def test_acos(self):
+        """Validate the inverse cos"""
+        x = flint(0.5)
+        y = np.arccos(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, np.pi/3)
+        x = flint(0)
+        x.interval = -1.2, -0.9
+        y = np.arccos(x)
+        self.assertEqual(y, np.pi)
+        self.assertAlmostEqual(y.b, np.pi)
+        self.assertAlmostEqual(y.v, np.pi)
+        self.assertAlmostEqual(y.a, np.arccos(-0.9))
+        x = flint(0)
+        x.interval = 0.8, 1.1
+        y = np.arccos(x)
+        self.assertEqual(y, 0)
+        self.assertAlmostEqual(y.b, np.arccos(0.8))
+        self.assertAlmostEqual(y.v, np.arccos(0.95))
+        self.assertEqual(y.a, 0)
+        x.interval = -1.1, 1.1
+        y = np.arccos(x)
+        self.assertAlmostEqual(y.b, np.pi)
+        self.assertAlmostEqual(y.v, np.pi/2)
+        self.assertEqual(y.a, 0)
+        x = flint(1.1)
+        with self.assertWarns(RuntimeWarning):
+            y = np.arccos(x)
+            self.assertTrue(np.isnan(y.a))
+            self.assertTrue(np.isnan(y.b))
+            self.assertTrue(np.isnan(y.v))
+        x = flint(-1.1)
+        with self.assertWarns(RuntimeWarning):
+            y = np.arccos(x)
+            self.assertTrue(np.isnan(y.a))
+            self.assertTrue(np.isnan(y.b))
+            self.assertTrue(np.isnan(y.v))
+
+    def test_atan(self):
+        """Validate the inverse tan"""
+        x = flint(1.0)
+        y = np.arctan(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, np.pi/4)
+
+
+class TestHyperbolicTrigMath(unittest.TestCase):
+    """Test inverse trig functions"""
+
+    def test_sinh(self):
+        """Validate sinh"""
+        res = 0.5*(np.e-1/np.e)
+        x = flint(1.0)
+        y = np.sinh(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, res)
+        x = flint(-1.0)
+        y = np.sinh(x)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, -res)
+
+    def test_cosh(self):
+        """Validate cosh"""
+        res = 0.5*(np.e+1/np.e)
+        x = flint(1.0)
+        y = np.cosh(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, res)
+        x = flint(-1.0)
+        y = np.cosh(x)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, res)
+        x = flint(0)
+        x.interval = -0.5,1
+        y = np.cosh(x)
+        self.assertEqual(y.a, 1)
+        self.assertAlmostEqual(y.b, res)
+        x = flint(0)
+        x.interval = -1,0.5
+        y = np.cosh(x)
+        self.assertEqual(y.a, 1)
+        self.assertAlmostEqual(y.b, res)
+
+    def test_tanh(self):
+        """Validate tanh"""
+        res = (np.e-1/np.e)/(np.e+1/np.e)
+        x = flint(1.0)
+        y = np.tanh(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, res)
+        x = flint(-1.0)
+        y = np.tanh(x)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, -res)
+
+
+class TestInvHyperTrigMath(unittest.TestCase):
+    """Test inverse hyperbolic trig functions"""
+
+    def test_asinh(self):
+        """Validate asinh"""
+        e = flint(np.e)
+        x = 0.5*(e-1/e)
+        y = np.arcsinh(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 1)
+        y = np.arcsinh(-x)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, -1)
+
+    def test_acosh(self):
+        """Validate acosh"""
+        e = flint(np.e)
+        x = 0.5*(e+1/e)
+        y = np.arccosh(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 1)
+        x = flint(1)
+        x.interval = 0.5,2.5
+        y = np.arccosh(x)
+        self.assertEqual(y.a, 0)
+        self.assertAlmostEqual(y.b, np.arccosh(2.5))
+        self.assertAlmostEqual(y.v, np.arccosh(1.5))
+        x = flint(0)
+        with self.assertWarns(RuntimeWarning):
+            y = np.arccosh(x)
+            self.assertTrue(np.isnan(y.a))
+            self.assertTrue(np.isnan(y.b))
+            self.assertTrue(np.isnan(y.v))
+
+    def test_atanh(self):
+        """Validate atanh"""
+        e = flint(np.e)
+        x = (e-1/e)/(e+1/e)
+        y = np.arctanh(x)
+        self.assertIsInstance(y, flint)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, 1)
+        y = np.arctanh(-x)
+        self.assertTrue(y.eps > 0)
+        self.assertEqual(y, -1)
+        x = flint(-1)
+        x.interval = -1.2,-0.9
+        y = np.arctanh(x)
+        self.assertTrue(np.isinf(y.a))
+        self.assertTrue(np.isinf(y.v))
+        self.assertFalse(np.isinf(y.b))
+        x = flint(1)
+        x.interval = 0.8,1.1
+        y = np.arctanh(x)
+        self.assertTrue(np.isinf(y.b))
+        self.assertFalse(np.isinf(y.v))
+        self.assertFalse(np.isinf(y.a))
+        x = flint(0)
+        x.interval = -1.1,1.1
+        y = np.arctanh(x)
+        self.assertTrue(np.isinf(y.b))
+        self.assertFalse(np.isinf(y.v))
+        self.assertTrue(np.isinf(y.a))
+        x = flint(-1.1)
+        with self.assertWarns(RuntimeWarning):
+            y = np.arctanh(x)
+            self.assertTrue(np.isnan(y.a))
+            self.assertTrue(np.isnan(y.b))
+            self.assertTrue(np.isnan(y.v))
+        x = flint(1.1)
+        with self.assertWarns(RuntimeWarning):
+            y = np.arctanh(x)
+            self.assertTrue(np.isnan(y.a))
+            self.assertTrue(np.isnan(y.b))
+            self.assertTrue(np.isnan(y.v))
