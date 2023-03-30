@@ -30,9 +30,9 @@ import numpy as np
 # 0.0.X -> Not all functionality has been implemented
 # 0.X.Y -> 'Most' functionality has been implemented and is ready for testing
 # X.Y.Z -> A stable and tested version is ready for release
-version = '0.0.2'
+version = '0.1.0'
 
-extra_compiler_args = ['-fmax_errors=5']
+extra_compiler_args = []
 
 extensions = [
     Extension(
