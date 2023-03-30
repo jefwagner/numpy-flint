@@ -368,6 +368,68 @@ class TestGeneralMath(unittest.TestCase):
         self.assertTrue(y.eps > 0)
         self.assertEqual(y, 2)
 
+    def test_hypot(self):
+        """Validate the hypotenuse"""
+        a = flint(0.6)
+        b = flint(0.8)
+        c = np.hypot(a,b)
+        self.assertIsInstance(c, flint)
+        self.assertTrue(c.eps > 0)
+        self.assertEqual(c, 1)
+        a = flint(-0.6)
+        b = flint(0.8)
+        c = np.hypot(a,b)
+        self.assertEqual(c, 1)
+        a = flint(-0.6)
+        b = flint(-0.8)
+        c = np.hypot(a,b)
+        self.assertEqual(c, 1)
+        a = flint(0.6)
+        b = flint(-0.8)
+        c = np.hypot(a,b)
+        self.assertEqual(c, 1)
+        a = flint(0)
+        a.interval = -1,1
+        b = flint(1)
+        c = np.hypot(a, b)
+        self.assertEqual(c, np.sqrt(2))
+        self.assertAlmostEqual(c.a, 1)
+        self.assertTrue(c.b> np.sqrt(2))
+        self.assertAlmostEqual(c.b, np.sqrt(2))
+        a = flint(0)
+        a.interval = -1,1
+        b = flint(-1)
+        c = np.hypot(a, b)
+        self.assertEqual(c, np.sqrt(2))
+        self.assertAlmostEqual(c.a, 1)
+        self.assertTrue(c.b> np.sqrt(2))
+        self.assertAlmostEqual(c.b, np.sqrt(2))
+        a = flint(1)
+        b = flint(0)
+        b.interval = -1,1
+        c = np.hypot(a, b)
+        self.assertEqual(c, np.sqrt(2))
+        self.assertAlmostEqual(c.a, 1)
+        self.assertTrue(c.b> np.sqrt(2))
+        self.assertAlmostEqual(c.b, np.sqrt(2))
+        a = flint(-1)
+        b = flint(0)
+        b.interval = -1,1
+        c = np.hypot(a, b)
+        self.assertEqual(c, np.sqrt(2))
+        self.assertAlmostEqual(c.a, 1)
+        self.assertTrue(c.b> np.sqrt(2))
+        self.assertAlmostEqual(c.b, np.sqrt(2))
+        a = flint(0)
+        b = flint(0)
+        a.interval = -1,1
+        b.interval = -1,1
+        c = np.hypot(a, b)
+        self.assertEqual(c, np.sqrt(2))
+        self.assertEqual(c.a, 0)
+        self.assertTrue(c.b > np.sqrt(2))
+        self.assertAlmostEqual(c.b, np.sqrt(2))
+
 
 class TestExponentialMath(unittest.TestCase):
     """Test the exponential and log based math functions"""
@@ -657,6 +719,41 @@ class TestInverseTrigMath(unittest.TestCase):
         self.assertIsInstance(y, flint)
         self.assertTrue(y.eps > 0)
         self.assertEqual(y, np.pi/4)
+
+    def test_atan2(self):
+        """Validate two-input arctan"""
+        x = flint(1)
+        y = flint(1)
+        z = np.arctan2(y,x)
+        self.assertIsInstance(z, flint)
+        self.assertTrue(z.eps > 0)
+        self.assertEqual(z, np.pi/4)
+        x = flint(-1)
+        y = flint(1)
+        z = np.arctan2(y,x)
+        self.assertEqual(z, 3*np.pi/4)
+        x = flint(1)
+        y = flint(-1)
+        z = np.arctan2(y,x)
+        self.assertEqual(z, -np.pi/4)
+        x = flint(-1)
+        y = flint(-1)
+        z = np.arctan2(y,x)
+        self.assertEqual(z, -3*np.pi/4)
+        x = flint(1)
+        y = flint(0)
+        y.interval = -1,1
+        z = np.arctan2(y,x)
+        self.assertAlmostEqual(z.a, -np.pi/4)
+        self.assertAlmostEqual(z.b, np.pi/4)
+        self.assertEqual(z.v, 0)
+        x = flint(0)
+        x.interval = -1,1
+        y = flint(1)
+        z = np.arctan2(y,x)
+        self.assertAlmostEqual(z.a, np.pi/4)
+        self.assertAlmostEqual(z.b, 3*np.pi/4)
+        self.assertAlmostEqual(z.v, np.pi/2)
 
 
 class TestHyperbolicTrigMath(unittest.TestCase):
