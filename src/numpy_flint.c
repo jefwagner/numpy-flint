@@ -939,7 +939,7 @@ static int npyflint_compare(const void* d1, const void* d2, void* arr) {
     } else if (fp1.a > fp2.b) {
         ret = 1;
     } else {
-        ret = 1;
+        ret = 0;
     }
     return ret;
 }
