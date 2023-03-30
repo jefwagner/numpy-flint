@@ -370,20 +370,42 @@ static NPY_INLINE flint flint_sqrt(flint f) {
 }
 // Cube root is a monotonic function with full range
 FLINT_MONOTONIC(cbrt)
-// Hypoteneus is a doubly monotonic function
+// Hypoteneus has a single minima in both f1 and f2
 static NPY_INLINE flint flint_hypot(flint f1, flint f2) {
-    double aa = hypot(f1.a, f2.a);
-    double ab = hypot(f1.a, f2.b);
-    double ba = hypot(f1.b, f2.a);
-    double bb = hypot(f1.b, f2.b);
-    double a = min4(aa, ab, ba, bb);
-    double b = max4(aa, ab, ba, bb);
-    double v = hypot(f1.v, f2.v);
-    flint _f = {
-        nextafter(nextafter(a, -INFINITY), -INFINITY),
-        nextafter(nextafter(b, INFINITY), INFINITY),
-        v
-    };
+    double f1a, f1b, f2a, f2b;
+    double a, b, v;
+    // Set f1a and f1b to arguments that give min and max outputs wrt f1
+    if (f1.a<0) {
+        if (f1.b<0) {
+            f1a = f1.b;
+            f1b = f1.a;
+        } else {
+            f1a = 0;
+            f1b = (-f1.a>f1.b)?(-f1.a):f1.b;
+        }
+    } else {
+        f1a = f1.a;
+        f1b = f1.b;
+    }
+    // Set f2a and f2b to arguments that give min and max outputs wrt f2
+    if (f2.a<0) {
+        if (f2.b<0) {
+            f2a = f2.b;
+            f2b = f2.a;
+        } else {
+            f2a = 0;
+            f2b = -f2.a>f2.b?-f2.a:f2.b;
+        }
+    } else {
+        f2a = f2.a;
+        f2b = f2.b;
+    }
+    a = hypot(f1a, f2a);
+    // don't shift down if it's already zero
+    a = (a==0)?0:nextafter(nextafter(a,-INFINITY),-INFINITY);
+    b = nextafter(nextafter(hypot(f1b, f2b), INFINITY), INFINITY);
+    v = hypot(f1.v, f2.v);
+    flint _f = {a, b, v};
     return _f;
 }
 // Exponential function is a monotonic function with full range
@@ -546,6 +568,55 @@ static NPY_INLINE flint flint_acos(flint f) {
 }
 FLINT_MONOTONIC(atan)
 // atan2
+static NPY_INLINE flint flint_atan2(flint fy, flint fx) {
+    flint _f;
+    if (fy.a > 0) {
+        // monotonic dec in fx
+        if (fx.a > 0 ) {
+            // monotonic inc in fy
+            _f.a = atan2(fy.a, fx.b);
+            _f.b = atan2(fy.b, fx.a);
+        } else if (fx.b > 0) {
+            // along positive y axis
+            _f.a = atan2(fy.a, fx.b);
+            _f.b = atan2(fy.a, fx.a);
+        } else {
+            // monotonic dec in fy
+            _f.a = atan2(fy.b, fx.b);
+            _f.b = atan2(fy.a, fx.a);
+        }
+    } else if (fy.b > 0) {
+        // along x axis
+        if (fx.a > 0 ) {
+            // along positive x axis
+            _f.a = atan2(fy.a, fx.a);
+            _f.b = atan2(fy.b, fx.a);
+        } else {
+            // has the branch line
+            _f.a = -FLINT_PI.a;
+            _f.b = FLINT_PI.a;
+        }
+    } else {
+        // monotonic inc in fx
+        if (fx.a > 0) {
+            // monotonic inc in fy
+            _f.a = atan2(fy.a, fx.a);
+            _f.b = atan2(fy.b, fx.b);
+        } else if (fx.b > 0) {
+            // along negative y axis
+            _f.a = atan2(fy.b, fx.a);
+            _f.b = atan2(fy.b, fx.b);
+        } else {
+            // monotonic dec in fy
+            _f.a = atan2(fy.b, fx.a);
+            _f.b = atan2(fy.a, fx.b);
+        }
+    }
+    _f.a = nextafter(nextafter(_f.a, -INFINITY), -INFINITY);
+    _f.b = nextafter(nextafter(_f.b, INFINITY), INFINITY);
+    _f.v = atan2(fy.v, fx.v);
+    return _f;
+}
 // Hyperbolic trig functions
 FLINT_MONOTONIC(sinh)
 static NPY_INLINE flint flint_cosh(flint f) {
