@@ -2,19 +2,21 @@
 ///
 // Copyright (c) 2023, Jef Wagner <jefwagner@gmail.com>
 //
-/// This file is part of numpy-flint.
-///
-/// Numpy-flint is free software: you can redistribute it and/or modify it under the
-/// terms of the GNU General Public License as published by the Free Software
-/// Foundation, either version 3 of the License, or (at your option) any later version.
-///
-/// Numpy-flint is distributed in the hope that it will be useful, but WITHOUT ANY
-/// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-/// PARTICULAR PURPOSE. See the GNU General Public License for more details.
-///
-/// You should have received a copy of the GNU General Public License along with Foobar.
-/// If not, see <https://www.gnu.org/licenses/>.
-///
+// This file is part of numpy-flint.
+//
+// Numpy-flint is free software: you can redistribute it and/or modify it under
+// the terms of the GNU General Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your option) any later
+// version.
+//
+// Numpy-flint is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+// details.
+//
+// You should have received a copy of the GNU General Public License along with
+// numpy-flint. If not, see <https://www.gnu.org/licenses/>.
+//
 #ifndef __FLINT_H__
 #define __FLINT_H__
 
@@ -74,10 +76,6 @@ typedef struct {
     double v;
 } flint;
 
-#define FLINT_ZERO ((flint) {0.0, 0.0, 0.0})
-#define FLINT_ONE ((flint) {1.0, 1.0, 1.0})
-#define FLINT_HALF ((flint) {0.5, 0.5, 0.5})
-#define FLINT_TWO ((flint) {2.0, 2.0, 2.0})
 #define FLINT_2PI ((flint) {6.283185307179586, 6.283185307179587, 6.283185307179586})
 #define FLINT_PI ((flint) {3.141592653589793, 3.1415926535897936, 3.141592653589793})
 #define FLINT_PI_2 ((flint) {1.5707963267948966, 1.5707963267948968, 1.5707963267948966})
@@ -591,10 +589,21 @@ static NPY_INLINE flint flint_atan2(flint fy, flint fx) {
             // along positive x axis
             _f.a = atan2(fy.a, fx.a);
             _f.b = atan2(fy.b, fx.a);
-        } else {
-            // has the branch line
+        } else if (fx.b > 0) {
+            // has the branch point
             _f.a = -FLINT_PI.a;
             _f.b = FLINT_PI.a;
+        } else {
+            // has the branch line
+            _f.a = atan2(fy.b, fx.b); // always between pi/2 and pi
+            _f.b = atan2(fy.a, fx.b); // always between -pi and -pi/2
+            if (fy.v > 0) {
+                // on positive branch
+                _f.b += FLINT_2PI.a; // move to positive branch
+            } else {
+                // on negative branch
+                _f.a -= FLINT_2PI.a; // move to negative branch
+            }
         }
     } else {
         // monotonic inc in fx

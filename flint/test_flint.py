@@ -754,6 +754,27 @@ class TestInverseTrigMath(unittest.TestCase):
         self.assertAlmostEqual(z.a, np.pi/4)
         self.assertAlmostEqual(z.b, 3*np.pi/4)
         self.assertAlmostEqual(z.v, np.pi/2)
+        x = flint(0)
+        x.interval = -1,1
+        y = flint(-1)
+        z = np.arctan2(y,x)
+        self.assertAlmostEqual(z.a, -3*np.pi/4)
+        self.assertAlmostEqual(z.b, -np.pi/4)
+        self.assertAlmostEqual(z.v, -np.pi/2)
+        x = flint(-1)
+        y = flint(0)
+        y.interval = -1.000000001,1
+        z = np.arctan2(y,x)
+        self.assertAlmostEqual(z.a, -5*np.pi/4)
+        self.assertAlmostEqual(z.b, -3*np.pi/4)
+        self.assertAlmostEqual(z.v, -np.pi)
+        x = flint(-1)
+        y = flint(0)
+        y.interval = -1,1.0000000001
+        z = np.arctan2(y,x)
+        self.assertAlmostEqual(z.a, 3*np.pi/4)
+        self.assertAlmostEqual(z.b, 5*np.pi/4)
+        self.assertAlmostEqual(z.v, np.pi)
 
 
 class TestHyperbolicTrigMath(unittest.TestCase):
