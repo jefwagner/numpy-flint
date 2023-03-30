@@ -147,7 +147,25 @@ static PyObject* pyflint_##name(PyObject* a, PyObject* b) { \
         } \
     } \
     PyErr_SetString(PyExc_TypeError, \
-        "+,-,*,/,** operations with PyFlint must be with numeric type"); \
+        "Binary operations for functions with PyFlint must be with numeric type"); \
+    Py_INCREF(Py_NotImplemented); \
+    return Py_NotImplemented; \
+}
+
+/// @brief A macro that makes a operator or function a method acting on self
+/// @param name The name of the function in the c and pyflint implementation
+/// @return The result of the Python/C pyflint_{name} function
+#define BINARY_TO_SELF_METHOD(name) \
+static PyObject* pyflint_##name##_meth(PyObject* self, PyObject* args) { \
+    Py_ssize_t size = PyTuple_Size(args); \
+    PyObject* O = {0}; \
+    if (size == 1) { \
+        if (PyArg_ParseTuple(args, "O", &O)) { \
+            return pyflint_##name(self, O); \
+        } \
+    } \
+    PyErr_SetString(PyExc_TypeError, \
+        "Binary operations for functions with PyFlint must be with numeric type"); \
     Py_INCREF(Py_NotImplemented); \
     return Py_NotImplemented; \
 }
@@ -527,6 +545,12 @@ UNARY_TO_SELF_METHOD(sqrt)
 /// @return The cube root of the interval
 UNARY_FLINT_RETURNER(cbrt)
 UNARY_TO_SELF_METHOD(cbrt)
+/// @brief Evaluate the hypotenuse distance from two intervals
+/// @param a The first PyFlint object
+/// @param b The second PyFlint object
+/// @return The hypotenuse distance of the two intervals sqrt(a^2+b^2)
+BINARY_FLINT_RETURNER(hypot)
+BINARY_TO_SELF_METHOD(hypot)
 /// @brief Evaluate the exponential of the interval
 /// @param a The PyFlint object
 /// @return The exponential of the interval
@@ -592,6 +616,12 @@ UNARY_TO_SELF_METHOD(acos)
 /// @return The inverse tangent of the interval
 UNARY_FLINT_RETURNER(atan)
 UNARY_TO_SELF_METHOD(atan)
+/// @brief Evaluate the 2-input inverse tangent of the interval
+/// @param a The y coordinate PyFlint object
+/// @param b The x coordinate PyFlint object
+/// @return The inverse tangent of the two intervals
+BINARY_FLINT_RETURNER(atan2)
+BINARY_TO_SELF_METHOD(atan2)
 /// @brief Evaluate the hyperbolic sine of the interval
 /// @param a The PyFlint object
 /// @return The hyperbolic sine of the interval
@@ -653,6 +683,8 @@ PyMethodDef pyflint_methods[] = {
     "Evaluate the square root of the interval"},
     {"cbrt", pyflint_cbrt_meth, METH_NOARGS,
     "Evaluate the cube root of the interval"},
+    {"hypot", pyflint_hypot_meth, METH_VARARGS,
+    "Evaluate the hypotenuse distance with the two intervals"},
     {"exp", pyflint_exp_meth, METH_NOARGS,
     "Evaluate the exponential func of an interval"},
     {"exp2", pyflint_exp2_meth, METH_NOARGS,
@@ -679,6 +711,8 @@ PyMethodDef pyflint_methods[] = {
     "Evaluate the inverse cosine of the interval"},
     {"arctan", pyflint_atan_meth, METH_NOARGS,
     "Evaluate the inverse tangent of the interval"},
+    {"arctan2", pyflint_atan2_meth, METH_VARARGS,
+    "Evalute the two-input inverse tangent of the intervals"},
     {"sinh", pyflint_sinh_meth, METH_NOARGS,
     "Evaluate the hyperbolic sine of the interval"},
     {"cosh", pyflint_cosh_meth, METH_NOARGS,
@@ -1252,6 +1286,7 @@ NPYFLINT_UNARY_UFUNC(isfinite, npy_bool)
 NPYFLINT_UNARY_UFUNC(absolute, flint)
 NPYFLINT_UNARY_UFUNC(sqrt, flint)
 NPYFLINT_UNARY_UFUNC(cbrt, flint)
+NPYFLINT_BINARY_UFUNC(hypot, flint, flint, flint)
 NPYFLINT_UNARY_UFUNC(exp, flint)
 NPYFLINT_UNARY_UFUNC(exp2, flint)
 NPYFLINT_UNARY_UFUNC(expm1, flint)
@@ -1265,6 +1300,7 @@ NPYFLINT_UNARY_UFUNC(tan, flint)
 NPYFLINT_UNARY_UFUNC(asin, flint)
 NPYFLINT_UNARY_UFUNC(acos, flint)
 NPYFLINT_UNARY_UFUNC(atan, flint)
+NPYFLINT_BINARY_UFUNC(atan2, flint, flint, flint)
 NPYFLINT_UNARY_UFUNC(sinh, flint)
 NPYFLINT_UNARY_UFUNC(cosh, flint)
 NPYFLINT_UNARY_UFUNC(tanh, flint)
@@ -1504,6 +1540,8 @@ PyMODINIT_FUNC PyInit_numpy_flint(void) {
     REGISTER_UFUNC(multiply, multiply)
     REGISTER_UFUNC(true_divide, divide)
     REGISTER_UFUNC(power, power)
+    REGISTER_UFUNC(hypot, hypot)
+    REGISTER_UFUNC(arctan2, atan2)
     // Finally register the new type with the module
     if (PyModule_AddObject(m, "flint", (PyObject *) &PyFlint_Type) < 0) {
         Py_DECREF(&PyFlint_Type);
