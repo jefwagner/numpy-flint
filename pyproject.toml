@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61", "numpy>=1.17"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "numpy-flint"
+version = "0.2.0"
+authors = [{name="Jef Wagner", email="jefwagner@gmail.com"}]
+readme = "readme.md"
+# license = "LGPL-3.0-or-later"
+dependencies = ["numpy>=1.17"]
+description = "Add a rounded floating point interval (flint) dtype to NumPy"
+
+[tools.setuptools]
+packages = ["flint"]
+license-files = ["copying*"]
