@@ -27,39 +27,19 @@ extern "C" {
 #include <math.h>
 #include <stdio.h>
 
-#if defined(__GNUC__)
-    #if defined(__STRICT_ANSI__)
-        #define NPY_INLINE __inline__
-    #else
-        #define NPY_INLINE inline
-    #endif
-#else
-    #define NPY_INLINE
-#endif
-
 /// @brief Get the max of 4 inputs
-#define max4(a,b,c,d)           \
-({                              \
-    __typeof__ (a) _a = (a);    \
-    __typeof__ (b) _b = (b);    \
-    __typeof__ (c) _c = (c);    \
-    __typeof__ (d) _d = (d);    \
-    _a = _a > _b ? _a : _b;     \
-    _b = _c > _d ? _c : _d;     \
-    _a > _b ? _a: _b;           \
-})
+static inline double max4( double a, double b, double c, double d) {
+    a = a>b?a:b;
+    b = c>d?c:d;
+    return a>b?a:b;
+}
 
 /// @brief Get the min of 4 inputs
-#define min4(a,b,c,d)           \
-({                              \
-    __typeof__ (a) _a = (a);    \
-    __typeof__ (b) _b = (b);    \
-    __typeof__ (c) _c = (c);    \
-    __typeof__ (d) _d = (d);    \
-    _a = _a < _b ? _a : _b;     \
-    _b = _c < _d ? _c : _d;     \
-    _a < _b ? _a: _b;           \
-})
+static inline double min4( double a, double b, double c, double d) {
+    a = a<b?a:b;
+    b = c<d?c:d;
+    return a<b?a:b;
+}
 
 
 //
@@ -86,7 +66,7 @@ typedef struct {
 // interval
 #define MAX_DOUBLE_INT 9.007199254740991e15
 #define MIN_DOUBLE_INT -9.007199254740991e15
-static NPY_INLINE flint int_to_flint(long long l) {
+static inline flint int_to_flint(long long l) {
     double d = (double) l;
     flint f = {d, d, d};
     if (d > MAX_DOUBLE_INT || d < MIN_DOUBLE_INT) {
@@ -96,14 +76,14 @@ static NPY_INLINE flint int_to_flint(long long l) {
     return f;
 }
 // Cast from a simple floating point create smallest interval surrounding it
-static NPY_INLINE flint double_to_flint(double f) {
+static inline flint double_to_flint(double f) {
     return (flint) {
         nextafter(f, -INFINITY),
         nextafter(f, INFINITY),
         f
     };
 }
-static NPY_INLINE flint float_to_flint(float f) {
+static inline flint float_to_flint(float f) {
     double a = nextafterf(f, -INFINITY);
     double b = nextafterf(f, INFINITY);
     return (flint) {a, b, (double) f};
@@ -113,19 +93,19 @@ static NPY_INLINE flint float_to_flint(float f) {
 // Floating point special value queries
 //
 // Interval must not overlap zero
-static NPY_INLINE int flint_nonzero(flint f) {
+static inline int flint_nonzero(flint f) {
     return f.a > 0.0 || f.b < 0.0;
 }
 // Any value is a NaN
-static NPY_INLINE int flint_isnan(flint f) {
+static inline int flint_isnan(flint f) {
     return isnan(f.a) || isnan(f.b) || isnan(f.v);
 }
 // Either boundary value is infinite 
-static NPY_INLINE int flint_isinf(flint f) {
+static inline int flint_isinf(flint f) {
     return isinf(f.a) || isinf(f.v);
 }
 // Both boundaries are finite
-static NPY_INLINE int flint_isfinite(flint f) {
+static inline int flint_isfinite(flint f) {
     return isfinite(f.a) && isfinite(f.b);
 }
 
@@ -133,37 +113,37 @@ static NPY_INLINE int flint_isfinite(flint f) {
 // Comparisons
 //
 // Any overlap should trigger as equal
-static NPY_INLINE int flint_eq(flint f1, flint f2) {
+static inline int flint_eq(flint f1, flint f2) {
     return 
         !flint_isnan(f1) && !flint_isnan(f2) &&
         (f1.a <= f2.b) && (f1.b >= f2.a);
 }
 // No overlay - all above or all below
-static NPY_INLINE int flint_ne(flint f1, flint f2) {
+static inline int flint_ne(flint f1, flint f2) {
     return
         flint_isnan(f1) || flint_isnan(f2) ||
         (f1.a > f2.b) || (f1.b < f2.a);
 }
 // Less than or equal allows for any amount of overlap
-static NPY_INLINE int flint_le(flint f1, flint f2) {
+static inline int flint_le(flint f1, flint f2) {
     return
         !flint_isnan(f1) && !flint_isnan(f2) &&
         f1.a <= f2.b;
 }
 // Less than must not overlap at all
-static NPY_INLINE int flint_lt(flint f1, flint f2) {
+static inline int flint_lt(flint f1, flint f2) {
     return 
         !flint_isnan(f1) && !flint_isnan(f2) &&
         f1.b < f2.a;
 }
 // Greater than or equal allows for any amount of overlap
-static NPY_INLINE int flint_ge(flint f1, flint f2) {
+static inline int flint_ge(flint f1, flint f2) {
     return 
         !flint_isnan(f1) && !flint_isnan(f2) &&
         f1.b >= f2.a;
 }
 // Greater than must not overlap
-static NPY_INLINE int flint_gt(flint f1, flint f2) {
+static inline int flint_gt(flint f1, flint f2) {
     return 
         !flint_isnan(f1) && !flint_isnan(f2) &&
         f1.a > f2.b;
@@ -173,18 +153,18 @@ static NPY_INLINE int flint_gt(flint f1, flint f2) {
 // Arithmatic
 //
 // --Identity--
-static NPY_INLINE flint flint_positive(flint f) {
+static inline flint flint_positive(flint f) {
     return f;
 }
 // --Negation--
 // swap upper and lower interval boundaries
-static NPY_INLINE flint flint_negative(flint f) {
+static inline flint flint_negative(flint f) {
     flint _f = {-f.b, -f.a, -f.v};
     return _f;
 }
 // --Addition--
 // add the boundaries
-static NPY_INLINE flint flint_add(flint f1, flint f2) {
+static inline flint flint_add(flint f1, flint f2) {
     flint _f = {
         nextafter(f1.a+f2.a, -INFINITY),
         nextafter(f1.b+f2.b, INFINITY),
@@ -192,25 +172,25 @@ static NPY_INLINE flint flint_add(flint f1, flint f2) {
     };
     return _f;
 }
-static NPY_INLINE void flint_inplace_add(flint* f1, flint f2) {
+static inline void flint_inplace_add(flint* f1, flint f2) {
     f1->a = nextafter(f1->a + f2.a, -INFINITY);
     f1->b = nextafter(f1->b + f2.b, INFINITY);
     f1->v += f2.v;
     return;
 }
-static NPY_INLINE flint flint_scalar_add(double s, flint f) {
+static inline flint flint_scalar_add(double s, flint f) {
     return flint_add(f, double_to_flint(s));
 }
-static NPY_INLINE flint flint_add_scalar(flint f, double s) {
+static inline flint flint_add_scalar(flint f, double s) {
     return flint_add(f, double_to_flint(s));    
 }
-static NPY_INLINE void flint_inplace_add_scalar(flint* f, double s) {
+static inline void flint_inplace_add_scalar(flint* f, double s) {
     flint_inplace_add(f, double_to_flint(s));
     return;
 }
 // --Subtraction--
 // swap second interval then subtract
-static NPY_INLINE flint flint_subtract(flint f1, flint f2) {
+static inline flint flint_subtract(flint f1, flint f2) {
     flint _f = {
         nextafter(f1.a-f2.b, -INFINITY),
         nextafter(f1.b-f2.a, INFINITY),
@@ -218,24 +198,24 @@ static NPY_INLINE flint flint_subtract(flint f1, flint f2) {
     };
     return _f;
 }
-static NPY_INLINE void flint_inplace_subtract(flint* f1, flint f2) {
+static inline void flint_inplace_subtract(flint* f1, flint f2) {
     f1->a = nextafter(f1->a - f2.b, -INFINITY);
     f1->b = nextafter(f1->b - f2.a, INFINITY);
     f1->v -= f2.v;
     return;
 }
-static NPY_INLINE flint flint_scalar_subtract(double s, flint f) {
+static inline flint flint_scalar_subtract(double s, flint f) {
     return flint_subtract(double_to_flint(s), f);
 }
-static NPY_INLINE flint flint_subtract_scalar(flint f, double s) {
+static inline flint flint_subtract_scalar(flint f, double s) {
     return flint_subtract(f, double_to_flint(s));
 }
-static NPY_INLINE void flint_inplace_subtract_scalar(flint* f, double s) {
+static inline void flint_inplace_subtract_scalar(flint* f, double s) {
     flint_inplace_subtract(f, double_to_flint(s));
 }
 // --Multiplication--
 // try all products of boundaries, choose min and max
-static NPY_INLINE flint flint_multiply(flint f1, flint f2) {
+static inline flint flint_multiply(flint f1, flint f2) {
     double a = min4(f1.a*f2.a, f1.a*f2.b, f1.b*f2.a, f1.b*f2.b);
     double b = max4(f1.a*f2.a, f1.a*f2.b, f1.b*f2.a, f1.b*f2.b);
     flint _f = {
@@ -245,25 +225,25 @@ static NPY_INLINE flint flint_multiply(flint f1, flint f2) {
     };
     return _f;
 }
-static NPY_INLINE void flint_inplace_multiply(flint* f1, flint f2) {
+static inline void flint_inplace_multiply(flint* f1, flint f2) {
     double _a = min4(f1->a*f2.a, f1->a*f2.b, f1->b*f2.a, f1->b*f2.b);
     f1->b = max4(f1->a*f2.a, f1->a*f2.b, f1->b*f2.a, f1->b*f2.b);
     f1->a = _a;
     f1->v *= f2.v;
     return;
 };
-static NPY_INLINE flint flint_scalar_multiply(double s, flint f) {
+static inline flint flint_scalar_multiply(double s, flint f) {
     return flint_multiply(double_to_flint(s), f);
 }
-static NPY_INLINE flint flint_multiply_scalar(flint f, double s) {
+static inline flint flint_multiply_scalar(flint f, double s) {
     return flint_multiply(f, double_to_flint(s));
 }
-static NPY_INLINE void flint_inplace_multiply_scalar(flint* f, double s) {
+static inline void flint_inplace_multiply_scalar(flint* f, double s) {
     flint_inplace_multiply(f, double_to_flint(s));
 }
 // --Division--
 // try all quotients of boundaries, choose min and max
-static NPY_INLINE flint flint_divide(flint f1, flint f2) {
+static inline flint flint_divide(flint f1, flint f2) {
     double a = min4(f1.a/f2.a, f1.a/f2.b, f1.b/f2.a, f1.b/f2.b);
     double b = max4(f1.a/f2.a, f1.a/f2.b, f1.b/f2.a, f1.b/f2.b);
     flint _f = {
@@ -273,20 +253,20 @@ static NPY_INLINE flint flint_divide(flint f1, flint f2) {
     };
     return _f;
 }
-static NPY_INLINE void flint_inplace_divide(flint* f1, flint f2) {
+static inline void flint_inplace_divide(flint* f1, flint f2) {
     double _a = min4(f1->a/f2.a, f1->a/f2.b, f1->b/f2.a, f1->b/f2.b);
     f1->b = max4(f1->a/f2.a, f1->a/f2.b, f1->b/f2.a, f1->b/f2.b);
     f1->a = _a;
     f1->v /= f2.v;
     return;
 };
-static NPY_INLINE flint flint_scalar_divide(double s, flint f) {
+static inline flint flint_scalar_divide(double s, flint f) {
     return flint_divide(double_to_flint(s), f);
 }
-static NPY_INLINE flint flint_divide_scalar(flint f, double s) {
+static inline flint flint_divide_scalar(flint f, double s) {
     return flint_divide(f, double_to_flint(s));
 }
-static NPY_INLINE void flint_inplace_divide_scalar(flint* f, double s) {
+static inline void flint_inplace_divide_scalar(flint* f, double s) {
     flint_inplace_divide(f, double_to_flint(s));
 }
 
@@ -294,7 +274,7 @@ static NPY_INLINE void flint_inplace_divide_scalar(flint* f, double s) {
 // Math functions
 //
 #define FLINT_MONOTONIC(fname) \
-static NPY_INLINE flint flint_##fname(flint f) { \
+static inline flint flint_##fname(flint f) { \
     flint _f = { \
         nextafter(nextafter(fname(f.a), -INFINITY), -INFINITY), \
         nextafter(nextafter(fname(f.b), INFINITY), INFINITY), \
@@ -303,7 +283,7 @@ static NPY_INLINE flint flint_##fname(flint f) { \
     return _f; \
 }
 // Power uses the pow function, it's like mul except with a NaN check
-static NPY_INLINE flint flint_power(flint f1, flint f2) {
+static inline flint flint_power(flint f1, flint f2) {
     double aa = pow(f1.a, f2.a);
     double ab = pow(f1.a, f2.b);
     double ba = pow(f1.b, f2.a);
@@ -320,7 +300,7 @@ static NPY_INLINE flint flint_power(flint f1, flint f2) {
     }
     return ret;
 }
-static NPY_INLINE void flint_inplace_power(flint* f1, flint f2) {
+static inline void flint_inplace_power(flint* f1, flint f2) {
     double aa = pow(f1->a, f2.a);
     double ab = pow(f1->a, f2.b);
     double ba = pow(f1->b, f2.a);
@@ -336,7 +316,7 @@ static NPY_INLINE void flint_inplace_power(flint* f1, flint f2) {
     }
 }
 // Absolute value 'folds' the interval if it spans zero
-static NPY_INLINE flint flint_absolute(flint f) {
+static inline flint flint_absolute(flint f) {
     flint _f = f;
     if (f.b < 0.0) { // interval is all negative - so invert
         _f.a = -f.b;
@@ -345,12 +325,12 @@ static NPY_INLINE flint flint_absolute(flint f) {
     } else if (f.a < 0) { // interval spans 0
         _f.a = 0.0; // 0 is the new lower bound
         _f.b = ((-f.a > f.b)? -f.a : f.b); // upper bound is the greater
-        _f.v = abs(f.v); // value is absolute valued
+        _f.v = ((f.v > 0.0)? f.v : -f.v); // value is absolute valued
     }
     return _f;
 }
 // Square root, only gives NaN if whole interval is less than zero
-static NPY_INLINE flint flint_sqrt(flint f) {
+static inline flint flint_sqrt(flint f) {
     flint _f;
     if (f.b < 0.0) {
         double nan = sqrt(-1.0);
@@ -369,7 +349,7 @@ static NPY_INLINE flint flint_sqrt(flint f) {
 // Cube root is a monotonic function with full range
 FLINT_MONOTONIC(cbrt)
 // Hypoteneus has a single minima in both f1 and f2
-static NPY_INLINE flint flint_hypot(flint f1, flint f2) {
+static inline flint flint_hypot(flint f1, flint f2) {
     double f1a, f1b, f2a, f2b;
     double a, b, v;
     // Set f1a and f1b to arguments that give min and max outputs wrt f1
@@ -411,7 +391,7 @@ FLINT_MONOTONIC(exp)
 FLINT_MONOTONIC(exp2)
 FLINT_MONOTONIC(expm1)
 #define FLINT_LOGFUNC(log, min) \
-static NPY_INLINE flint flint_##log(flint f) { \
+static inline flint flint_##log(flint f) { \
     flint _f; \
     if (f.b < min) { \
         double nan = sqrt(-1.0); \
@@ -433,7 +413,7 @@ FLINT_LOGFUNC(log2, 0.0)
 FLINT_LOGFUNC(log1p, -1.0)
 // Error fuction is monotonic with full range
 FLINT_MONOTONIC(erf)
-static NPY_INLINE flint flint_erfc(flint f) {
+static inline flint flint_erfc(flint f) {
     flint _f = {
         nextafter(nextafter(erfc(f.b), -INFINITY), -INFINITY),
         nextafter(nextafter(erfc(f.a), INFINITY), INFINITY),
@@ -443,7 +423,7 @@ static NPY_INLINE flint flint_erfc(flint f) {
 }
 // FLINT_MONOTONIC(erfc) -> decresing, need some swapy-swap
 // Trig Functions
-static NPY_INLINE flint flint_sin(flint f) {
+static inline flint flint_sin(flint f) {
     int n = (int) floor(f.a/FLINT_2PI.a);
     double da = f.a-n*FLINT_2PI.a;
     double db = f.b-n*FLINT_2PI.a;
@@ -472,7 +452,7 @@ static NPY_INLINE flint flint_sin(flint f) {
     _f.v = sin(f.v);
     return _f;
 }
-static NPY_INLINE flint flint_cos(flint f) {
+static inline flint flint_cos(flint f) {
     int n = (int) floor(f.a/FLINT_2PI.a);
     double da = f.a-n*FLINT_2PI.a;
     double db = f.b-n*FLINT_2PI.a;
@@ -497,7 +477,7 @@ static NPY_INLINE flint flint_cos(flint f) {
     _f.v = cos(f.v);
     return _f;
 }
-static NPY_INLINE flint flint_tan(flint f) {
+static inline flint flint_tan(flint f) {
     double ta = tan(f.a);
     double tb = tan(f.b);
     flint _f;
@@ -512,7 +492,7 @@ static NPY_INLINE flint flint_tan(flint f) {
     return _f;
 }
 // Inverse trig functions
-static NPY_INLINE flint flint_asin(flint f) {
+static inline flint flint_asin(flint f) {
     flint _f;
     if (f.b < -1.0 || f.a > 1.0) {
         double nan = sqrt(-1.0);
@@ -538,7 +518,7 @@ static NPY_INLINE flint flint_asin(flint f) {
     }
     return _f;
 }
-static NPY_INLINE flint flint_acos(flint f) {
+static inline flint flint_acos(flint f) {
     flint _f;
     if (f.b < -1.0 || f.a > 1.0) {
         double nan = sqrt(-1.0);
@@ -566,7 +546,7 @@ static NPY_INLINE flint flint_acos(flint f) {
 }
 FLINT_MONOTONIC(atan)
 // atan2
-static NPY_INLINE flint flint_atan2(flint fy, flint fx) {
+static inline flint flint_atan2(flint fy, flint fx) {
     flint _f;
     if (fy.a > 0) {
         // monotonic dec in fx
@@ -628,7 +608,7 @@ static NPY_INLINE flint flint_atan2(flint fy, flint fx) {
 }
 // Hyperbolic trig functions
 FLINT_MONOTONIC(sinh)
-static NPY_INLINE flint flint_cosh(flint f) {
+static inline flint flint_cosh(flint f) {
     double a = cosh(f.a);
     double b = cosh(f.b);
     flint _f;
@@ -644,7 +624,7 @@ static NPY_INLINE flint flint_cosh(flint f) {
 FLINT_MONOTONIC(tanh)
 // Inverse hyperbolic trig
 FLINT_MONOTONIC(asinh)
-static NPY_INLINE flint flint_acosh(flint f) {
+static inline flint flint_acosh(flint f) {
     flint _f;
     if (f.b < 1.0) {
         double nan = sqrt(-1.0);
@@ -661,7 +641,7 @@ static NPY_INLINE flint flint_acosh(flint f) {
     return _f;
 }
 // atanh
-static NPY_INLINE flint flint_atanh(flint f) {
+static inline flint flint_atanh(flint f) {
     flint _f;
     if (f.b < -1.0 || f.a > 1.0) {
         double nan = sqrt(-1.0);
