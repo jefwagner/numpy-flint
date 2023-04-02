@@ -1323,13 +1323,13 @@ PyArray_Descr* npyflint_descr;
 /// @brief Struct with minimum needed components for the module definition
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "numpy_flint",
+    .m_name = "flint",
     .m_doc = "Rounded floating point intervals (flints)",
     .m_size = -1
 };
 
 /// @brief The module initialization function
-PyMODINIT_FUNC PyInit_numpy_flint(void) {
+PyMODINIT_FUNC PyInit_flint(void) {
     PyObject* m;
     PyObject* numpy;
     PyObject* numpy_dict;
