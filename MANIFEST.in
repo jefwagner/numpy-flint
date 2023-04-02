@@ -1,1 +1,4 @@
-graft src
+global-include *.c
+global-include *.h
+include readme.md
+include copying*
