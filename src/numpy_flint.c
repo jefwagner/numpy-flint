@@ -59,14 +59,14 @@ PyMemberDef pyflint_members[] = {
 /// @brief Check if an object is a flint
 /// @param ob The PyObject to check
 /// @return 1 if the object is a flint, 0 otherwise
-static NPY_INLINE int PyFlint_Check(PyObject* ob) {
+static inline int PyFlint_Check(PyObject* ob) {
     return PyObject_IsInstance(ob, (PyObject*) &PyFlint_Type);
 }
 
 /// @brief Create a PyFlint object from a c flint struct.
 /// @param f The c flint struct
 /// @return A new PyFlint object that contains a copy of f
-static NPY_INLINE PyObject* PyFlint_FromFlint(flint f) {
+static inline PyObject* PyFlint_FromFlint(flint f) {
     PyFlint* p = (PyFlint*) PyFlint_Type.tp_alloc(&PyFlint_Type, 0);
     if (p) {
         p->obval = f;
@@ -207,7 +207,7 @@ static PyObject* pyflint_inplace_##name(PyObject* a, PyObject* b) { \
 /// @param name the name of the operation in the c and pyflint implementation
 /// @return The result of the Python/C pyflint_{name} function
 #define BINARY_TO_TERTIARY(name) \
-static NPY_INLINE PyObject* pyflint_b2t_##name(PyObject *a, PyObject* b, \
+static inline PyObject* pyflint_b2t_##name(PyObject *a, PyObject* b, \
                                                PyObject* NPY_UNUSED(c)) { \
     return pyflint_##name(a,b); \
 }
@@ -216,7 +216,7 @@ static NPY_INLINE PyObject* pyflint_b2t_##name(PyObject *a, PyObject* b, \
 /// @param name the name of the operation in the c and pyflint implementation
 /// @return The result of the Python/C pyflint_inplace_{name} function
 #define BINARY_TO_TERTIARY_INPLACE(name) \
-static NPY_INLINE PyObject* pyflint_b2t_inplace_##name(PyObject *a, PyObject* b, \
+static inline PyObject* pyflint_b2t_inplace_##name(PyObject *a, PyObject* b, \
                                                        PyObject* NPY_UNUSED(c)) { \
     return pyflint_inplace_##name(a,b); \
 }
@@ -1258,7 +1258,7 @@ static void npyflint_ufunc_##name(char** args, const npy_intp* dim, \
     for (i=0; i<n; i++) { \
         in0_f = *((in0_type*) in0_ptr); \
         in1_f = *((in1_type*) in1_ptr); \
-        *((out_type*) out_ptr) = (out_type) flint_##name(in0_f, in1_f); \
+        *((out_type*) out_ptr) = flint_##name(in0_f, in1_f); \
         in0_ptr += in0_std; \
         in1_ptr += in1_std; \
         out_ptr += out_std; \
@@ -1323,13 +1323,13 @@ PyArray_Descr* npyflint_descr;
 /// @brief Struct with minimum needed components for the module definition
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "numpy_flint",
+    .m_name = "flint",
     .m_doc = "Rounded floating point intervals (flints)",
     .m_size = -1
 };
 
 /// @brief The module initialization function
-PyMODINIT_FUNC PyInit_numpy_flint(void) {
+PyMODINIT_FUNC PyInit_flint(void) {
     PyObject* m;
     PyObject* numpy;
     PyObject* numpy_dict;

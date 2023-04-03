@@ -24,45 +24,21 @@ because 'why not?'
 # You should have received a copy of the GNU General Public License along with
 # numpy-flint. If not, see <https://www.gnu.org/licenses/>.
 
-from setuptools import Extension, setup
+from setuptools import setup, Extension
 import numpy as np
 
-# 0.0.X -> Not all functionality has been implemented
-# 0.X.Y -> 'Most' functionality has been implemented and is ready for testing
-# X.Y.Z -> A stable and tested version is ready for release
-version = '0.0.2'
-
-extra_compiler_args = ['-fmax_errors=5']
-
-extensions = [
-    Extension(
-        name='flint.numpy_flint',
-        sources=['src/numpy_flint.c'],
-        depends=[
-            'src/flint.h',
-            'src/numpy_flint.c',
-        ],
-        include_dirs=[np.get_include(),'src'],
-    )
-]
-
-setup_metadata = dict(
-    name='numpy-flint', # Name of the package on pypi
-    packages=['flint'], # Actual package name as used in python
-    # package_dir = {'':'.'},
-    url='https://github.com/jefwagner/numpy-flint',
-    author="Jef Wagner",
-    author_email="jefwagner@gmail.com",
-    description="Add a rounded floating point interval (flint) dtype to NumPy",
-    long_description=__doc__,
-    ext_modules=extensions,
-    install_requires=["numpy>=1.22"],
-    extras_require={},
-    version=version,
+setup_args = dict(
+    ext_modules = [
+        Extension(
+            name='flint',
+            sources=['src/numpy_flint.c'],
+            depends=[
+                'src/flint.h',
+                'src/numpy_flint.c',
+            ],
+            include_dirs=[np.get_include(),'src'],
+        )
+    ]
 )
 
-def build(setup_kwargs):
-    setup_kwargs.update({"ext_modules": extensions})
-
-if __name__=='__main__':
-    setup(**setup_metadata)
+setup(**setup_args)
