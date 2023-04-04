@@ -15,7 +15,7 @@
 # numpy-flint. If not, see <https://www.gnu.org/licenses/>.
 
 [build-system]
-requires = ["setuptools>=59", "numpy>=1.17"]
+requires = ["setuptools>=59", "oldest-supported-numpy"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -28,10 +28,18 @@ requires-python = ">=3.7"
 dependencies = ["numpy>=1.17"]
 description = "Add a rounded floating point interval (flint) dtype to NumPy"
 
-[tools.setuptools]
-packages = ["flint"]
+[tool.setuptools]
+# packages = ["flint"]
 license-files = ["copying*"]
 
-[tools.cibuildwheel]
+[tool.cibuildwheel]
+# Build for cpython only
+# build = "cp310-win_amd64" // for quick local testing
+skip =  "pp*"
+# Test the wheels
 test-requires = "pytest"
-test-command = "pytest -v --log-level=DEBUG"
+test-command = "pytest {project} -v --log-level=DEBUG"
+
+[tool.cibuildwheel.linux]
+# dependencies do not build for musl
+skip = ["pp* *musllinux*"]
