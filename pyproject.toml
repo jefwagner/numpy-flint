@@ -34,7 +34,7 @@ license-files = ["copying*"]
 
 [tool.cibuildwheel]
 # Build for cpython only
-# build = "cp310-win_amd64" // for quick local testing
+# build = "cp310-win_amd64" # for quick local testing
 skip =  "pp*"
 # Test the wheels
 test-requires = "pytest"
