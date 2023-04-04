@@ -439,7 +439,7 @@ static inline flint flint_power(flint f1, flint f2) {
     double v = pow(f1.v, f2.v);
     flint ret = {0.0, 0.0, 0.0};
     if (isnan(aa) || isnan(ab) || isnan(ba) || isnan(bb) || isnan(v)) {
-        v = sqrt(-1.0);
+        v = NAN;
         ret.a = v; ret.b = v; ret.v = v;
     } else {
         ret.a = nextafter(nextafter(min4(aa,ab,ba,bb),-INFINITY),-INFINITY);
@@ -461,7 +461,7 @@ static inline void flint_inplace_power(flint* f1, flint f2) {
     double bb = pow(f1->b, f2.b);
     double v = pow(f1->v, f2.v);
     if (isnan(aa) || isnan(ab) || isnan(ba) || isnan(bb) || isnan(v)) {
-        v = sqrt(-1.0);
+        v = NAN;
         f1->a = v; f1->b = v; f1->v = v;
     } else {
         f1->a = nextafter(nextafter(min4(aa,ab,ba,bb),-INFINITY),-INFINITY);
@@ -500,7 +500,7 @@ static inline flint flint_absolute(flint f) {
 static inline flint flint_sqrt(flint f) {
     flint _f;
     if (f.b < 0.0) {
-        double nan = sqrt(-1.0);
+        double nan = NAN;
         _f.a = nan; _f.b = nan; _f.v = nan;
     } else if (f.a < 0) {
         _f.a = 0.0;
@@ -602,7 +602,7 @@ FLINT_MONOTONIC(expm1)
 static inline flint flint_##log(flint f) { \
     flint _f; \
     if (f.b < min) { \
-        double nan = sqrt(-1.0); \
+        double nan = NAN; \
         _f.a = nan; _f.b = nan; _f.v = nan; \
     } else if (f.a < min) { \
         _f.a = -INFINITY; \
@@ -750,7 +750,7 @@ static inline flint flint_tan(flint f) {
 static inline flint flint_asin(flint f) {
     flint _f;
     if (f.b < -1.0 || f.a > 1.0) {
-        double nan = sqrt(-1.0);
+        double nan = NAN;
         _f.a = nan; _f.b = nan; _f.v = nan;
     } else {
         if (f.a < -1.0) {
@@ -782,7 +782,7 @@ static inline flint flint_asin(flint f) {
 static inline flint flint_acos(flint f) {
     flint _f;
     if (f.b < -1.0 || f.a > 1.0) {
-        double nan = sqrt(-1.0);
+        double nan = NAN;
         _f.a = nan; _f.b = nan; _f.v = nan;
     } else {
         if (f.a < -1.0) {
@@ -926,7 +926,7 @@ FLINT_MONOTONIC(asinh)
 static inline flint flint_acosh(flint f) {
     flint _f;
     if (f.b < 1.0) {
-        double nan = sqrt(-1.0);
+        double nan = NAN;
         _f.a = nan; _f.b = nan; _f.v = nan;
     } else if (f.a < 1.0) {
         _f.a = 0.0;
@@ -950,7 +950,7 @@ static inline flint flint_acosh(flint f) {
 static inline flint flint_atanh(flint f) {
     flint _f;
     if (f.b < -1.0 || f.a > 1.0) {
-        double nan = sqrt(-1.0);
+        double nan = NAN;
         _f.a = nan; _f.b = nan; _f.v = nan;
     } else {
         if (f.a < -1.0) {
