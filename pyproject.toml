@@ -20,7 +20,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "numpy-flint"
-version = "0.2.3"
+version = "0.2.4"
 authors = [{name="Jef Wagner", email="jefwagner@gmail.com"}]
 readme = "readme.md"
 # license = "LGPL-3.0-or-later"

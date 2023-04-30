@@ -349,7 +349,8 @@ static PyObject* pyflint_getstate(PyObject* self, PyObject* args) {
 static PyObject* pyflint_setstate(PyObject* self, PyObject* args) {
     flint *f;
     f = &(((PyFlint*) self)->obval);
-    if (PyArg_ParseTuple(args, "ddd:setstate", &(f->a), &(f->b), &(f->v))) {
+    if (!PyArg_ParseTuple(args, "(ddd):setstate", &(f->a), &(f->b), &(f->v))) {
+        PyErr_SetString(PyExc_ValueError, "Could not unpack state tuple");
         return NULL;
     }
     Py_INCREF(Py_None);
@@ -929,9 +930,9 @@ static void npyflint_copyswapn(void* dst, npy_intp dstride,
         // Else we make a call for each double in the struct
         descr->f->copyswapn(&(_dst->a), dstride, &(_src->a), sstride, 
                             n, swap, arr);
-        descr->f->copyswapn(&(_dst->b), dstride, &(_src->a), sstride, 
+        descr->f->copyswapn(&(_dst->b), dstride, &(_src->b), sstride, 
                             n, swap, arr);
-        descr->f->copyswapn(&(_dst->v), dstride, &(_src->a), sstride, 
+        descr->f->copyswapn(&(_dst->v), dstride, &(_src->v), sstride, 
                             n, swap, arr);
     }
     Py_DECREF(descr);
