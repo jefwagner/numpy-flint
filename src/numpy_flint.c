@@ -930,9 +930,9 @@ static void npyflint_copyswapn(void* dst, npy_intp dstride,
         // Else we make a call for each double in the struct
         descr->f->copyswapn(&(_dst->a), dstride, &(_src->a), sstride, 
                             n, swap, arr);
-        descr->f->copyswapn(&(_dst->b), dstride, &(_src->a), sstride, 
+        descr->f->copyswapn(&(_dst->b), dstride, &(_src->b), sstride, 
                             n, swap, arr);
-        descr->f->copyswapn(&(_dst->v), dstride, &(_src->a), sstride, 
+        descr->f->copyswapn(&(_dst->v), dstride, &(_src->v), sstride, 
                             n, swap, arr);
     }
     Py_DECREF(descr);

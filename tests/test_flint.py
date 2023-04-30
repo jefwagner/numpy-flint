@@ -943,3 +943,61 @@ class TestInvHyperTrigMath(unittest.TestCase):
         self.assertTrue(np.isnan(y.a))
         self.assertTrue(np.isnan(y.b))
         self.assertTrue(np.isnan(y.v))
+
+
+class TestNumpyArray():
+
+    def test_array(self):
+        a = np.array([1], dtype=flint)
+        assert isinstance(a, np.ndarray)
+        assert a.dtype == flint
+        assert isinstance(a[0], flint)
+        assert a[0].a == np.nextafter(1,-np.inf)
+        assert a[0].b == np.nextafter(1, np.inf)
+        assert a[0].v == 1.0
+
+    def test_zeros(self):
+        a = np.zeros((1,), dtype=flint)
+        assert isinstance(a, np.ndarray)
+        assert a.dtype == flint
+        assert isinstance(a[0], flint)
+        assert a[0].a == 0.0
+        assert a[0].b == 0.0
+        assert a[0].v == 0.0
+
+    def test_fill(self):
+        x = flint(1.5)
+        x.interval = 1,2
+        a = np.full((3,4), x, dtype=flint)
+        assert isinstance(a, np.ndarray)
+        assert a.dtype == flint
+        for val in np.nditer(a):
+            item = val.item()
+            assert isinstance(item, flint)
+            assert item.a == x.a
+            assert item.b == x.b
+            assert item.v == x.v
+
+    def test_copy_row(self):
+        a = np.zeros((3,3), dtype=flint)
+        b = np.arange(1,4, dtype=flint)
+        zero_row = np.zeros((3,))
+        assert np.alltrue( a[0] == zero_row )
+        assert np.alltrue( a[1] == zero_row )
+        assert np.alltrue( a[2] == zero_row )
+        a[1] = b
+        assert np.alltrue( a[0] == zero_row )
+        assert np.alltrue( a[1] == b )
+        assert np.alltrue( a[2] == zero_row )
+
+    def test_copy_col(self):
+        a = np.zeros((3,3), dtype=flint)
+        b = np.arange(1,4, dtype=flint)
+        zero_row = np.zeros((3,))
+        assert np.alltrue( a[:,0] == zero_row )
+        assert np.alltrue( a[:,1] == zero_row )
+        assert np.alltrue( a[:,2] == zero_row )
+        a[:,1] = b
+        assert np.alltrue( a[:,0] == zero_row )
+        assert np.alltrue( a[:,1] == b )
+        assert np.alltrue( a[:,2] == zero_row )
