@@ -349,7 +349,8 @@ static PyObject* pyflint_getstate(PyObject* self, PyObject* args) {
 static PyObject* pyflint_setstate(PyObject* self, PyObject* args) {
     flint *f;
     f = &(((PyFlint*) self)->obval);
-    if (PyArg_ParseTuple(args, "ddd:setstate", &(f->a), &(f->b), &(f->v))) {
+    if (!PyArg_ParseTuple(args, "(ddd):setstate", &(f->a), &(f->b), &(f->v))) {
+        PyErr_SetString(PyExc_ValueError, "Could not unpack state tuple");
         return NULL;
     }
     Py_INCREF(Py_None);

@@ -89,6 +89,39 @@ class TestProperties(unittest.TestCase):
         self.assertEqual(2, x.b)
         self.assertEqual(1.75, x.v)
 
+class TestState:
+
+    def test_getstate(self):
+        x = flint(1.5)
+        x.interval = 1,2
+        state = x.__getstate__()
+        assert isinstance(state, tuple)
+        assert len(state) == 3
+        assert state[0] == x.a
+        assert state[1] == x.b
+        assert state[2] == x.v
+
+    def test_setstate(self):
+        x = flint(0)
+        x.__setstate__((1.0, 2.0, 1.5))
+        assert x.a == 1.0
+        assert x.b == 2.0
+        assert x.v == 1.5
+
+    def test_reduce(self):
+        x = flint(1.5)
+        x.interval = 1,2
+        r = x.__reduce__()
+        assert isinstance(r, tuple)
+        assert len(r) == 2
+        assert isinstance(r[0], type)
+        assert r[0] == type(x)
+        assert isinstance(r[1], tuple)
+        assert len(r[1]) == 3
+        assert r[1][0] == x.a
+        assert r[1][1] == x.b
+        assert r[1][2] == x.v
+
 
 class TestFloatSpecialValues(unittest.TestCase):
     """Test the query functions for the float special value checks"""
