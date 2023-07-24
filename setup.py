@@ -34,6 +34,7 @@ setup_args = dict(
             sources=['src/flint/numpy_flint.c'],
             depends=[
                 'src/flint/flint.h',
+                'src/flint/numpy_flint.h',
                 'src/flint/numpy_flint.c',
             ],
             include_dirs=[np.get_include(),'src/flint'],
