@@ -50,7 +50,7 @@ static void** PyFlint_API;
 /// @brief Import the c api for numpy-flint python module
 /// @return 0 on success -1 on failure
 static int import_flint(void) {
-    PyFlint_API = (void**) PyCapsule_Import("flint._C_API", 0);
+    PyFlint_API = (void**) PyCapsule_Import("flint.numpy_flint.c_api", 0);
     return (PyFlint_API != NULL) ? 0 : -1;
 }
 

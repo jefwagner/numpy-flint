@@ -18,9 +18,9 @@ A python/NumPy interface for rounded FLoating point INTervals or flints.
 # You should have received a copy of the GNU General Public License along with
 # numpy-flint. If not, see <https://www.gnu.org/licenses/>.
 
-from .flint import flint
+from .numpy_flint import flint
 
-__version__ = "0.2.7"
+__version__ = "0.2.8"
 
 def get_include() -> str:
     """Return the directory with the 'flint.h' header file"""

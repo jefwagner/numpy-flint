@@ -1299,13 +1299,13 @@ PyArray_Descr* npyflint_descr;
 /// @brief Struct with minimum needed components for the module definition
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "flint",
+    .m_name = "numpy_flint",
     .m_doc = "Rounded floating point intervals (flints)",
     .m_size = -1
 };
 
 /// @brief The module initialization function
-PyMODINIT_FUNC PyInit_flint(void) {
+PyMODINIT_FUNC PyInit_numpy_flint(void) {
     PyObject* m;
     PyObject* numpy;
     PyObject* numpy_dict;
@@ -1524,18 +1524,25 @@ PyMODINIT_FUNC PyInit_flint(void) {
         Py_DECREF(&PyFlint_Type);
         Py_DECREF(m);
         PyErr_Print();
-        PyErr_SetString(PyExc_SystemError, "Could not add flint.flint type to module flint.");
+        PyErr_SetString(PyExc_SystemError, "Could not add numpy_flint.flint type to module flint.");
         return NULL;
     }
     // Register PyFlint_Type and NPY_FLINT with the c api
     PyFlint_API[0] = (void*) &PyFlint_Type;
     PyFlint_API[1] = (void*) &NPY_FLINT;
-    c_api_object = PyCapsule_New((void*) PyFlint_API, "flint._C_API", NULL);
-    if (PyModule_AddObject(m, "_C_API", c_api_object) < 0) {
+    c_api_object = PyCapsule_New((void*) PyFlint_API, "flint.numpy_flint.c_api", NULL);
+    if (c_api_object == NULL) {
         Py_XDECREF(c_api_object);
         Py_DECREF(m);
         PyErr_Print();
-        PyErr_SetString(PyExc_SystemError, "Could not add flint._C_API to flint module.");
+        PyErr_SetString(PyExc_SystemError, "Could create the c_api_object.");
+        return NULL;
+    }
+    if (PyModule_AddObject(m, "c_api", c_api_object) < 0) {
+        Py_XDECREF(c_api_object);
+        Py_DECREF(m);
+        PyErr_Print();
+        PyErr_SetString(PyExc_SystemError, "Could not add numpy_flint.c_api to flint module.");
         return NULL;
     }
 
