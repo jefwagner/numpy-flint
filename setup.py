@@ -30,13 +30,14 @@ import numpy as np
 setup_args = dict(
     ext_modules = [
         Extension(
-            name='flint',
-            sources=['src/numpy_flint.c'],
+            name='flint.numpy_flint',
+            sources=['src/flint/numpy_flint.c'],
             depends=[
-                'src/flint.h',
-                'src/numpy_flint.c',
+                'src/flint/flint.h',
+                'src/flint/numpy_flint.h',
+                'src/flint/numpy_flint.c',
             ],
-            include_dirs=[np.get_include(),'src'],
+            include_dirs=[np.get_include()],
         )
     ]
 )

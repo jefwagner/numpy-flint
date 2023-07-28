@@ -8,6 +8,7 @@
 **/build
 **/dist
 **/*.cpython*
+**/*.tar.bz2
 
 # Allow for scratch jupyter notebooks
 **/*.ipynb
