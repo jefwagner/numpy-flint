@@ -32,6 +32,7 @@
 #define NUMPY_FLINT_MODULE
 #include "numpy_flint.h"
 
+
 /// @brief The array of data members of the flint object
 PyMemberDef pyflint_members[] = {
     {"a", T_DOUBLE, offsetof(PyFlint, obval.a), READONLY,
@@ -1528,8 +1529,8 @@ PyMODINIT_FUNC PyInit_numpy_flint(void) {
         return NULL;
     }
     // Register PyFlint_Type and NPY_FLINT with the c api
-    PyFlint_API[0] = (void*) &PyFlint_Type;
-    PyFlint_API[1] = (void*) &NPY_FLINT;
+    PyFlint_API[0] = (void*) get_pyflint_type;
+    PyFlint_API[1] = (void*) get_npy_flint;
     c_api_object = PyCapsule_New((void*) PyFlint_API, "flint.numpy_flint.c_api", NULL);
     if (c_api_object == NULL) {
         Py_XDECREF(c_api_object);

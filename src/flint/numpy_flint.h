@@ -33,17 +33,29 @@ typedef struct {
     flint obval;
 } PyFlint;
 
-#ifdef NUMPY_FLINT_MODULE
 
 /// @brief The flint PyTypeObject
 static PyTypeObject PyFlint_Type;
+
 /// @brief The integer identifier for the flint as numpy data type
 static int NPY_FLINT;
 
+#ifdef NUMPY_FLINT_MODULE
+
+/// @brief Get the flint PyTypeObject
+static PyTypeObject* get_pyflint_type() {
+    return &PyFlint_Type;
+}
+
+/// @brief Get the NPY_FLINT type identifier
+static int get_npy_flint() {
+    return NPY_FLINT;
+}
+
 #else
 
-#define PyFlint_Type (*((PyTypeObject*) PyFlint_API[0]))
-#define NPY_FLINT (*((int*) PyFlint_API[1]))
+#define get_pyflint_type (*(PyTypeObject* (*)()) PyFlint_API[0])
+#define get_npy_flint (*(int (*)()) PyFlint_API[1])
 
 static void** PyFlint_API;
 
@@ -51,7 +63,12 @@ static void** PyFlint_API;
 /// @return 0 on success -1 on failure
 static int import_flint(void) {
     PyFlint_API = (void**) PyCapsule_Import("flint.numpy_flint.c_api", 0);
-    return (PyFlint_API != NULL) ? 0 : -1;
+    if (PyFlint_API == NULL) {
+        return -1;
+    }
+    PyFlint_Type = *get_pyflint_type();
+    NPY_FLINT = get_npy_flint();
+    return 0;
 }
 
 #endif // NUMPY_FLINT_MODULE
