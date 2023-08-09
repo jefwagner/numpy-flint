@@ -9,6 +9,7 @@
 **/dist
 **/*.cpython*
 **/*.tar.bz2
+**/wheelhouse
 
 # Allow for scratch jupyter notebooks
 **/*.ipynb

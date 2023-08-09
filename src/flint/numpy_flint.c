@@ -1356,6 +1356,7 @@ PyMODINIT_FUNC PyInit_numpy_flint(void) {
         return NULL;
     }
     Py_INCREF(&PyFlint_Type);
+    PyFlint_Type_Ptr = &PyFlint_Type;
 
     // Initialize the numpy data-type extension of the python type
     // Register standard arrayfuncs for numpy-flint
@@ -1529,7 +1530,7 @@ PyMODINIT_FUNC PyInit_numpy_flint(void) {
         return NULL;
     }
     // Register PyFlint_Type and NPY_FLINT with the c api
-    PyFlint_API[0] = (void*) get_pyflint_type;
+    PyFlint_API[0] = (void*) get_pyflint_type_ptr;
     PyFlint_API[1] = (void*) get_npy_flint;
     c_api_object = PyCapsule_New((void*) PyFlint_API, "flint.numpy_flint.c_api", NULL);
     if (c_api_object == NULL) {
