@@ -33,9 +33,9 @@ typedef struct {
     flint obval;
 } PyFlint;
 
-
 /// @brief The flint PyTypeObject
 static PyTypeObject PyFlint_Type;
+static PyTypeObject* PyFlint_Type_Ptr;
 
 /// @brief The integer identifier for the flint as numpy data type
 static int NPY_FLINT;
@@ -43,7 +43,7 @@ static int NPY_FLINT;
 #ifdef NUMPY_FLINT_MODULE
 
 /// @brief Get the flint PyTypeObject
-static PyTypeObject* get_pyflint_type() {
+static PyTypeObject* get_pyflint_type_ptr() {
     return &PyFlint_Type;
 }
 
@@ -52,9 +52,9 @@ static int get_npy_flint() {
     return NPY_FLINT;
 }
 
-#else
+#else // NOT NUMPY_FLINT_MODULE
 
-#define get_pyflint_type (*(PyTypeObject* (*)()) PyFlint_API[0])
+#define get_pyflint_type_ptr (*(PyTypeObject* (*)()) PyFlint_API[0])
 #define get_npy_flint (*(int (*)()) PyFlint_API[1])
 
 static void** PyFlint_API;
@@ -66,7 +66,7 @@ static int import_flint(void) {
     if (PyFlint_API == NULL) {
         return -1;
     }
-    PyFlint_Type = *get_pyflint_type();
+    PyFlint_Type_Ptr = get_pyflint_type_ptr();
     NPY_FLINT = get_npy_flint();
     return 0;
 }
@@ -77,19 +77,35 @@ static int import_flint(void) {
 /// @param ob The PyObject to check
 /// @return 1 if the object is a flint, 0 otherwise
 static inline int PyFlint_Check(PyObject* ob) {
-    return PyObject_IsInstance(ob, (PyObject*) &PyFlint_Type);
+    return PyObject_IsInstance(ob, (PyObject*) PyFlint_Type_Ptr);
 }
 
 /// @brief Create a PyFlint object from a c flint struct.
 /// @param f The c flint struct
 /// @return A new PyFlint object that contains a copy of f
 static inline PyObject* PyFlint_FromFlint(flint f) {
-    PyFlint* p = (PyFlint*) PyFlint_Type.tp_alloc(&PyFlint_Type, 0);
+    PyFlint* p = (PyFlint*) PyFlint_Type.tp_alloc(PyFlint_Type_Ptr, 0);
     if (p) {
         p->obval = f;
     }
     return (PyObject*) p;
 }
+
+/// @brief Get a C flint from a PyFlint
+/// @param ob The PyFlint object
+/// @return The coresponding flint value
+static inline flint PyFlint_AsFlint(PyObject* ob) {
+    return  ((PyFlint*) ob)->obval;
+}
+
+/// @brief Get a C double from a PyFlint
+/// @param ob The PyFlint object
+/// @return The coresponding flint center value
+static inline double PyFlint_AsDouble(PyObject* ob) {
+    return (((PyFlint*) ob)->obval).v;
+}
+
+
 
 #ifdef __cplusplus
 }
