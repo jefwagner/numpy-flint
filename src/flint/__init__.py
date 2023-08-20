@@ -20,7 +20,7 @@ A python/NumPy interface for rounded FLoating point INTervals or flints.
 
 from .numpy_flint import flint
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 def get_include() -> str:
     """Return the directory with the 'flint.h' header file"""

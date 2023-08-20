@@ -91,6 +91,22 @@ static inline PyObject* PyFlint_FromFlint(flint f) {
     return (PyObject*) p;
 }
 
+/// @brief Get a C flint from a PyFlint
+/// @param ob The PyFlint object
+/// @return The coresponding flint value
+static inline flint PyFlint_AsFlint(PyObject* ob) {
+    return  ((PyFlint*) ob)->obval;
+}
+
+/// @brief Get a C double from a PyFlint
+/// @param ob The PyFlint object
+/// @return The coresponding flint center value
+static inline double PyFlint_AsDouble(PyObject* ob) {
+    return (((PyFlint*) ob)->obval).v;
+}
+
+
+
 #ifdef __cplusplus
 }
 #endif
