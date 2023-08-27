@@ -23,7 +23,7 @@ name = "numpy-flint"
 authors = [{name="Jef Wagner", email="jefwagner@gmail.com"}]
 readme = "readme.md"
 requires-python = ">=3.7"
-dependencies = ["numpy>=1.17"]
+dependencies = ["numpy>=1.14.5"]
 description = "Add a rounded floating point interval (flint) dtype to NumPy"
 dynamic = ["version"]
 
