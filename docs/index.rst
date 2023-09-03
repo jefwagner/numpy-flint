@@ -14,12 +14,9 @@ should be though of as 'could be equal'.
 
     usage
     python_api
+    devel
+    c_ext
     c_api
-    c_ext_api
-
-.. todo::
-    
-    Add a development/contribution page to the documentation
 
 
 Why? What purpose do rounded floating point intervals serve?
@@ -54,9 +51,9 @@ For many very important numbers such as :math:`\pi` or :math:`\sqrt{2}` or even 
 humble 1/3rd do not have finite decimal representations, and so they can not be
 represented exactly by floating point numbers. Frequently, we can not exactly capture
 the input needed for some mathematical calculations. For example, since we can not
-exactly represent :math:`\pi` with floating point numbers the result of :math:`\sin(
-\text{nfp}(\pi))`, where :math:`\text{nfp}(x)` represents the 'nearest floating point'
-to :math:`x`, will be close to, but NOT equal zero.
+exactly represent :math:`\pi` with floating point numbers the result of 
+:math:`\sin(\text{nfp}(\pi))`, where :math:`\text{nfp}(x)` represents the 'nearest 
+floating point' to :math:`x`, will be close to, but NOT equal zero.
 
 This limited ability to represent numbers leads to another consequence of floating point
 numbers:
@@ -138,7 +135,7 @@ References
 ----------
 
 The following references are use for the description of the floating point interval
-    * `Patrikalakis et al <https://web.mit.edu/hyperbook/Patrikalakis-Maekawa-Cho/node46.html>`_ contains
-      details of the mathematical implementation of the flint objects
-    * `Know Maximum Errors in Math Functions <https://www.gnu.org/software/libc/manual/html_node/Errors-in-Math-Functions.html>`_
-      from the gnu libc manual.
+
+* `Patrikalakis et al 
+  <https://web.mit.edu/hyperbook/Patrikalakis-Maekawa-Cho/node46.html>`_ contains
+  details of the mathematical implementation of the flint objects

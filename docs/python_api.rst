@@ -34,11 +34,13 @@ Flint Python API
 
     .. py:data:: interval
 
-        :getter: The interval data as a tuple (a, b, v)
+        :getter: The interval boundary data as a tuple (a, b)
 
         :setter: Set the interval data with a tuple
 
             If you set only boundaries (a,b) the tracked value is set to the average (b-a)/2
+
+            You can also set the tracked value with a three element tuple (a, b, v)            
 
     Methods
     """""""

@@ -621,36 +621,42 @@ static inline void flint_inplace_divide_scalar(flint* f, double s) {
  * 
  * .. c:function:: static inline flint flint_FUNCNAME(flint fa, ...)
  * 
- * * ``power``
- * * ``absolute``
- * * ``sqrt``
- * * ``cbrt``
- * * ``hypot``
- * * ``exp``
- * * ``exp2``
- * * ``expm1``
- * * ``log``
- * * ``log10``
- * * ``log2``
- * * ``log1p``
- * * ``erf``
- * * ``erfc``
- * * ``sin``
- * * ``cos``
- * * ``tan``
- * * ``asin``
- * * ``acos``
- * * ``atan``
- * * ``atan2``
- * * ``sinh``
- * * ``cosh``
- * * ``tanh``
- * * ``asinh``
- * * ``acosh``
- * * ``atanh``
+ * Functions
+ * ^^^^^^^^^
+ * 
+ * ``power``
+ * ``absolute``
+ * ``sqrt``
+ * ``cbrt``
+ * ``hypot``
+ * ``exp``
+ * ``exp2``
+ * ``expm1``
+ * ``log``
+ * ``log10``
+ * ``log2``
+ * ``log1p``
+ * ``erf``
+ * ``erfc``
+ * ``sin``
+ * ``cos``
+ * ``tan``
+ * ``asin``
+ * ``acos``
+ * ``atan``
+ * ``atan2``
+ * ``sinh``
+ * ``cosh``
+ * ``tanh``
+ * ``asinh``
+ * ``acosh``
+ * ``atanh``
  */
 
 
+/**
+ * .. _foo:
+ */
 #define FLINT_MONOTONIC(fname) \
 static inline flint flint_##fname(flint f) { \
     flint _f = { \
