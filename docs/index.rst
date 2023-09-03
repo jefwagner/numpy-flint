@@ -18,11 +18,6 @@ should be though of as 'could be equal'.
     c_ext_api
 
 .. todo::
-
-    Change docstrings and comments in C source files, and add documentation for the 
-    python and c flint apis.
-
-.. todo::
     
     Add a development/contribution page to the documentation
 

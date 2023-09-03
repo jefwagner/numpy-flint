@@ -11,7 +11,8 @@ Binary packages are avialable from `PyPI <https://pypi.org/project/numpy-flint/>
 
     pip install numpy-flint
 
-Binary packages have been only been built for CPython 3.7 and later and for some operating systems and architectures including:
+Binary packages have been only been built for CPython 3.7 and later and for some
+operating systems and architectures including:
     * macos x86
     * glibc linux i686
     * glibc linux x86_64

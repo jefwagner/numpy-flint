@@ -27,6 +27,10 @@ dependencies = ["numpy>=1.14.5"]
 description = "Add a rounded floating point interval (flint) dtype to NumPy"
 dynamic = ["version"]
 
+[project.urls]
+"Homepage" = "https://jefwagner.github.io/flint"
+"Bug Tracker" = "https://github.com/jefwagner/numpy-flint/issues"
+
 [tool.setuptools]
 license-files = ["copying*"]
 
