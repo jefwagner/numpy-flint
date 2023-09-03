@@ -1,4 +1,6 @@
-/// @file numpy_flint.h C-api for numpy-flint
+/**
+ * Python C-API for flints
+ */
 //
 // Copyright (c) 2023, Jef Wagner <jefwagner@gmail.com>
 //
@@ -26,41 +28,56 @@ extern "C" {
 #include <Python.h>
 #include "flint.h"
 
-/// @brief A python flint object
-/// @param obval The internal c representation of the flint object
+/**
+ * The python flint object
+ */
 typedef struct {
     PyObject_HEAD
+    /**
+     * The flint c struct
+     */
     flint obval;
 } PyFlint;
 
-/// @brief The flint PyTypeObject
 static PyTypeObject PyFlint_Type;
+/**
+ * A pointer to the PyTypeObject for the PyFlints
+ * 
+ * Because of the programming standard or declaring everything static outside of
+ * enclosing functions, it is neccessary to use this pointer when you need to access
+ * the PyTypeObject* for the PyFlint instead of the direct address &PyFlint_Type.
+ */
 static PyTypeObject* PyFlint_Type_Ptr;
 
-/// @brief The integer identifier for the flint as numpy data type
+/**
+ * The integer enumeration for the custom 'flint' type in numpy.
+ */
 static int NPY_FLINT;
 
-#ifdef NUMPY_FLINT_MODULE
+#ifdef NUMPY_FLINT_MODULE // If header file accessed as part of numpy-flint project
 
-/// @brief Get the flint PyTypeObject
+// Get the flint PyTypeObject
 static PyTypeObject* get_pyflint_type_ptr() {
     return &PyFlint_Type;
 }
 
-/// @brief Get the NPY_FLINT type identifier
+// Get the NPY_FLINT type identifier
 static int get_npy_flint() {
     return NPY_FLINT;
 }
 
-#else // NOT NUMPY_FLINT_MODULE
+#else // If header file is used outside of the numpy-flint project
 
 #define get_pyflint_type_ptr (*(PyTypeObject* (*)()) PyFlint_API[0])
 #define get_npy_flint (*(int (*)()) PyFlint_API[1])
 
 static void** PyFlint_API;
 
-/// @brief Import the c api for numpy-flint python module
-/// @return 0 on success -1 on failure
+/**
+ * Import the c api for numpy-flint python module
+ * 
+ * :return: 0 on success -1 on failure
+ */
 static int import_flint(void) {
     PyFlint_API = (void**) PyCapsule_Import("flint.numpy_flint.c_api", 0);
     if (PyFlint_API == NULL) {
@@ -73,16 +90,22 @@ static int import_flint(void) {
 
 #endif // NUMPY_FLINT_MODULE
 
-/// @brief Check if an object is a flint
-/// @param ob The PyObject to check
-/// @return 1 if the object is a flint, 0 otherwise
+/**
+ * Check if an object is a flint
+ * 
+ * :param ob: The PyObject to check
+ * :return: 1 if the object is a flint, 0 otherwise
+ */
 static inline int PyFlint_Check(PyObject* ob) {
     return PyObject_IsInstance(ob, (PyObject*) PyFlint_Type_Ptr);
 }
 
-/// @brief Create a PyFlint object from a c flint struct.
-/// @param f The c flint struct
-/// @return A new PyFlint object that contains a copy of f
+/**
+ * Create a PyFlint object from a c flint struct.
+ * 
+ * :param f: The c flint struct
+ * :return: A new PyFlint object that contains a copy of f
+ */
 static inline PyObject* PyFlint_FromFlint(flint f) {
     PyFlint* p = (PyFlint*) PyFlint_Type.tp_alloc(PyFlint_Type_Ptr, 0);
     if (p) {
@@ -91,21 +114,25 @@ static inline PyObject* PyFlint_FromFlint(flint f) {
     return (PyObject*) p;
 }
 
-/// @brief Get a C flint from a PyFlint
-/// @param ob The PyFlint object
-/// @return The coresponding flint value
+/**
+ * Get a C flint from a PyFlint
+ * 
+ * :param ob: The PyFlint object
+ * :return: The coresponding flint value
+ */
 static inline flint PyFlint_AsFlint(PyObject* ob) {
     return  ((PyFlint*) ob)->obval;
 }
 
-/// @brief Get a C double from a PyFlint
-/// @param ob The PyFlint object
-/// @return The coresponding flint center value
+/**
+ * Get a C double from a PyFlint
+ * 
+ * :param ob: The PyFlint object
+ * :return: The coresponding flint center value
+ */
 static inline double PyFlint_AsDouble(PyObject* ob) {
     return (((PyFlint*) ob)->obval).v;
 }
-
-
 
 #ifdef __cplusplus
 }

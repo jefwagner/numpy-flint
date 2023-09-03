@@ -1,18 +1,21 @@
 **flint**\ : Rounded Floating Point Intervals data type
 =======================================================
 
-This package implements a rounded **fl**\ oating point **int**\ ervals or ``flint`` data-type
-in python and NumPy. The floating point interval type contains a pair of numbers that
-define the endpoint of an interval, and the exact value of a computation always lies
-somewhere in that interval. This type addresses one shortcoming of floating point
-numbers: equality comparisons. For this package, the equality operator for flints is
-implemented such that any overlap of the interval will be treated as equal, and should
-be though of as 'could be equal'.
+This package implements a rounded **fl**\ oating point **int**\ ervals or ``flint``
+data-type in python and NumPy. The floating point interval type contains a pair of
+numbers that define the endpoint of an interval, and the exact value of a computation
+always lies somewhere in that interval. This type addresses one shortcoming of floating
+point numbers: equality comparisons. For this package, the equality operator for flints
+is implemented such that any overlap of the interval will be treated as equal, and
+should be though of as 'could be equal'.
 
 .. toctree::
     :maxdepth: 1
 
     usage
+    python_api
+    c_api
+    c_ext_api
 
 .. todo::
 

@@ -1,5 +1,5 @@
-Using flints in python
-======================
+Installation and Basic Usage
+============================
 
 Installation
 ------------
